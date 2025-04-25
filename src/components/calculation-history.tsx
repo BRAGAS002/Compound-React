@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +19,7 @@ interface HistoryProps {
 
 export function CalculationHistory({ onSelectHistory }: HistoryProps) {
   const [history, setHistory] = useState<CalculationHistoryType[]>([]);
+  const [selectedItem, setSelectedItem] = useState<CalculationHistoryType | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -34,6 +34,9 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
   const handleDelete = (id: string) => {
     deleteCalculation(id);
     loadHistory();
+    if (selectedItem?.id === id) {
+      setSelectedItem(null);
+    }
     toast({
       title: "Calculation deleted",
       description: "The calculation has been removed from history."
@@ -43,6 +46,7 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
   const handleClearAll = () => {
     localStorage.setItem('calculationHistory', JSON.stringify([]));
     loadHistory();
+    setSelectedItem(null);
     toast({
       title: "History cleared",
       description: "All calculations have been deleted from history."
@@ -51,6 +55,17 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
+  };
+
+  const handleItemClick = (item: CalculationHistoryType) => {
+    setSelectedItem(item);
+    onSelectHistory({
+      principal: item.principal,
+      rate: item.rate,
+      time: item.time,
+      frequency: item.frequency,
+      startDate: item.startDate ? new Date(item.startDate) : null
+    });
   };
 
   return (
@@ -79,59 +94,73 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
         </AlertDialog>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-72 rounded-md">
-          {history.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No calculation history yet
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {history.map((item) => (
-                <div 
-                  key={item.id} 
-                  className="border rounded-lg p-4 hover:bg-accent/50 cursor-pointer"
-                  onClick={() => onSelectHistory({
-                    principal: item.principal,
-                    rate: item.rate,
-                    time: item.time,
-                    frequency: item.frequency,
-                    startDate: item.startDate ? new Date(item.startDate) : null
-                  })}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-medium">{formatCurrency(item.principal)} invested for {item.time} years</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {item.rate}% compounded {item.frequency}
-                      </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ScrollArea className="h-72 rounded-md">
+            {history.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No calculation history yet
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {history.map((item) => (
+                  <div 
+                    key={item.id} 
+                    className={`border rounded-lg p-4 hover:bg-accent/50 cursor-pointer ${
+                      selectedItem?.id === item.id ? 'bg-accent' : ''
+                    }`}
+                    onClick={() => handleItemClick(item)}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h4 className="font-medium">{formatCurrency(item.principal)} invested for {item.time} years</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {item.rate}% compounded {item.frequency}
+                        </p>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item.id);
+                        }}
+                      >
+                        Delete
+                      </Button>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(item.id);
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div className="text-sm">
-                      <p className="flex gap-2 items-center">
-                        <Badge variant="outline" className="text-xs">Final</Badge>
-                        {formatCurrency(item.finalAmount)}
-                      </p>
+                    <div className="flex justify-between items-center">
+                      <div className="text-sm">
+                        <p className="flex gap-2 items-center">
+                          <Badge variant="outline" className="text-xs">Final</Badge>
+                          {formatCurrency(item.finalAmount)}
+                        </p>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDate(item.createdAt)}
+                      </span>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDate(item.createdAt)}
-                    </span>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+          
+          {selectedItem && (
+            <div className="border rounded-lg p-4">
+              <h3 className="font-semibold mb-4">Calculation Details</h3>
+              <div className="space-y-2">
+                <p><strong>Principal:</strong> {formatCurrency(selectedItem.principal)}</p>
+                <p><strong>Annual Rate:</strong> {selectedItem.rate}%</p>
+                <p><strong>Time Period:</strong> {selectedItem.time} years</p>
+                <p><strong>Compounding:</strong> {selectedItem.frequency}</p>
+                <p><strong>Final Amount:</strong> {formatCurrency(selectedItem.finalAmount)}</p>
+                <p><strong>Total Interest:</strong> {formatCurrency(selectedItem.totalInterest)}</p>
+                <p><strong>Formula Used:</strong> {selectedItem.formula}</p>
+                <p><strong>Calculated on:</strong> {formatDate(selectedItem.createdAt)}</p>
+              </div>
             </div>
           )}
-        </ScrollArea>
+        </div>
       </CardContent>
     </Card>
   );

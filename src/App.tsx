@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,7 +10,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <ThemeProvider defaultTheme="system" storageKey="wealth-blueprint-theme">
+  <ThemeProvider defaultTheme="system" storageKey="compound-calculator-theme">
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />

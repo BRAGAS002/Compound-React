@@ -1,10 +1,10 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CalculationParams, CompoundingFrequency, calculateCompoundInterest, saveCalculation } from "@/utils/calculatorUtils";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -13,13 +13,40 @@ interface CalculatorFormProps {
 }
 
 export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
-  const [params, setParams] = useState<CalculationParams>({
-    principal: 10000,
-    rate: 5,
-    time: 10,
-    frequency: 'annually',
-    startDate: null
+  const [params, setParams] = useState<CalculationParams>(() => {
+    // Load saved params from localStorage or use defaults
+    const savedParams = localStorage.getItem('calculatorParams');
+    return savedParams ? JSON.parse(savedParams) : {
+      principal: 10000,
+      rate: 5,
+      time: 10,
+      frequency: 'annually',
+      startDate: null
+    };
   });
+
+  const [includeDate, setIncludeDate] = useState(false);
+
+  // Save params to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('calculatorParams', JSON.stringify(params));
+  }, [params]);
+
+  // Update startDate when includeDate changes
+  useEffect(() => {
+    if (includeDate) {
+      setParams(prev => ({
+        ...prev,
+        startDate: new Date()
+      }));
+    } else {
+      setParams(prev => ({
+        ...prev,
+        startDate: null
+      }));
+    }
+  }, [includeDate]);
+
   const { toast } = useToast();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,14 +180,24 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date (Optional)</Label>
-              <Input
-                id="startDate"
-                name="startDate"
-                type="date"
-                onChange={handleChange}
-                className="finance-input"
-              />
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="includeDate"
+                  checked={includeDate}
+                  onCheckedChange={(checked) => setIncludeDate(checked as boolean)}
+                />
+                <Label htmlFor="includeDate">Include Start Date</Label>
+              </div>
+              {includeDate && (
+                <Input
+                  id="startDate"
+                  name="startDate"
+                  type="date"
+                  value={params.startDate ? params.startDate.toISOString().split('T')[0] : ''}
+                  onChange={handleChange}
+                  className="finance-input"
+                />
+              )}
             </div>
           </div>
 
