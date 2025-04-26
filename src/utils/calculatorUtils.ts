@@ -1,4 +1,3 @@
-
 export type CompoundingFrequency = 
   | 'annually' 
   | 'semi-annually' 
@@ -51,9 +50,9 @@ export const getFrequencyValue = (frequency: CompoundingFrequency): number => {
 
 // Format numbers as currency
 export const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-PH', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'PHP',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(value);

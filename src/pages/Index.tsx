@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { CalculatorForm } from "@/components/calculator-form";
@@ -16,7 +15,7 @@ const Index = () => {
 
   return (
     <Layout>
-      <div className="max-w-5xl mx-auto">
+      <div className="w-full px-4">
         <section className="mb-8">
           <h2 className="text-3xl font-bold text-center mb-8">Compound Interest Calculator</h2>
           <p className="text-center text-muted-foreground mb-8">
