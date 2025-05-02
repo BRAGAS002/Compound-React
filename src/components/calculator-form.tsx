@@ -64,7 +64,7 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate inputs
@@ -95,13 +95,18 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
       return;
     }
 
+    // Calculate results
     const result = calculateCompoundInterest(params);
-    saveCalculation(params, result);
+    
+    // Save to history
+    await saveCalculation(params, result);
+    
+    // Notify parent component
     onCalculate(params);
-
+    
     toast({
       title: "Calculation Complete",
-      description: "Your compound interest has been calculated successfully.",
+      description: "Your calculation has been saved to history.",
     });
   };
 
@@ -201,9 +206,31 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
             </div>
           </div>
 
-          <Button type="submit" className="w-full finance-btn">
-            Calculate
-          </Button>
+          <div className="flex gap-4">
+            <Button type="submit" className="flex-1 finance-btn">
+              Calculate
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setParams({
+                  principal: "" as any,
+                  rate: "" as any,
+                  time: "" as any,
+                  frequency: "" as any,
+                  startDate: null
+                });
+                toast({
+                  title: "Fields Reset",
+                  description: "All fields have been cleared.",
+                });
+              }}
+            >
+              Reset All Fields
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>

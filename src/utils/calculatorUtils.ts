@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 export type CompoundingFrequency = 
   | 'annually' 
   | 'semi-annually' 
@@ -91,40 +93,65 @@ export const calculateCompoundInterest = (params: CalculationParams): Calculatio
   const totalInterest = finalAmount - principal;
   const formula = getFormula(frequency);
   
-  // Calculate yearly breakdown
-  const yearlyBreakdown: YearlyBreakdown[] = [];
-  
-  for (let year = 1; year <= time; year++) {
-    let yearAmount: number;
-    
+  // Calculate breakdown for each compounding period
+  const breakdown: YearlyBreakdown[] = [];
+  const totalPeriods = frequency === 'continuously' ? time : n * time;
+  let currentDate = startDate ? new Date(startDate) : undefined;
+  let previousAmount = principal;
+
+  for (let i = 1; i <= totalPeriods; i++) {
+    let periodAmount: number;
+    let period = i;
+    let periodTime = frequency === 'continuously' ? i : i / n;
     if (frequency === 'continuously') {
-      yearAmount = principal * Math.exp((rate / 100) * year);
+      periodAmount = principal * Math.exp((rate / 100) * periodTime);
     } else {
-      yearAmount = principal * Math.pow(1 + (rate / 100) / n, n * year);
+      periodAmount = principal * Math.pow(1 + (rate / 100) / n, n * periodTime);
     }
-    
-    const previousAmount = year === 1 ? principal : yearlyBreakdown[year - 2].amount;
-    const interestEarned = yearAmount - previousAmount;
-    
-    let yearDate: string | undefined;
-    if (startDate) {
-      const date = new Date(startDate);
-      date.setFullYear(date.getFullYear() + year);
-      yearDate = date.toISOString().split('T')[0];
+    const interestEarned = periodAmount - previousAmount;
+    previousAmount = periodAmount;
+
+    let periodDate: string | undefined;
+    if (currentDate) {
+      let date = new Date(currentDate);
+      switch (frequency) {
+        case 'annually':
+          date.setFullYear(date.getFullYear() + 1);
+          break;
+        case 'semi-annually':
+          date.setMonth(date.getMonth() + 6);
+          break;
+        case 'quarterly':
+          date.setMonth(date.getMonth() + 3);
+          break;
+        case 'monthly':
+          date.setMonth(date.getMonth() + 1);
+          break;
+        case 'weekly':
+          date.setDate(date.getDate() + 7);
+          break;
+        case 'daily':
+          date.setDate(date.getDate() + 1);
+          break;
+        default:
+          break;
+      }
+      periodDate = date.toISOString().split('T')[0];
+      currentDate = date;
     }
-    
-    yearlyBreakdown.push({
-      year,
-      amount: yearAmount,
+
+    breakdown.push({
+      year: period, // keep property name for compatibility with UI, but it's now payment number
+      amount: periodAmount,
       interestEarned,
-      date: yearDate
+      date: periodDate
     });
   }
-  
+
   return {
     finalAmount,
     totalInterest,
-    yearlyBreakdown,
+    yearlyBreakdown: breakdown,
     formula
   };
 };
@@ -135,7 +162,7 @@ export const generateId = (): string => {
 };
 
 // Store calculation in history
-export const saveCalculation = (params: CalculationParams, result: CalculationResult): void => {
+export const saveCalculation = async (params: CalculationParams, result: CalculationResult): Promise<void> => {
   const historyItem: CalculationHistory = {
     ...params,
     ...result,
@@ -143,26 +170,140 @@ export const saveCalculation = (params: CalculationParams, result: CalculationRe
     createdAt: new Date().toISOString()
   };
   
-  const history = getCalculationHistory();
+  // Save to localStorage
+  const history = await getCalculationHistory();
   history.unshift(historyItem);
-  
   localStorage.setItem('calculationHistory', JSON.stringify(history));
+  
+  // Save to Supabase database
+  try {
+    const { data, error } = await supabase.from('calculations').insert([{
+      principal: params.principal,
+      rate: params.rate,
+      time: params.time,
+      frequency: params.frequency,
+      startDate: params.startDate?.toISOString() ?? null,
+      finalAmount: result.finalAmount,
+      totalInterest: result.totalInterest,
+      formula: result.formula,
+      created_at: historyItem.createdAt
+    }]);
+    console.log('Supabase insert result:', { data, error });
+  } catch (error) {
+    console.error('Failed to save calculation to database:', error);
+  }
 };
 
-// Get calculation history from localStorage
-export const getCalculationHistory = (): CalculationHistory[] => {
-  const history = localStorage.getItem('calculationHistory');
-  return history ? JSON.parse(history) : [];
+// Get calculation history from both localStorage and database
+export const getCalculationHistory = async (): Promise<CalculationHistory[]> => {
+  // Get from localStorage
+  const localHistory = localStorage.getItem('calculationHistory');
+  const localHistoryItems = localHistory ? JSON.parse(localHistory) : [];
+  
+  try {
+    // Get from database
+    const { data: dbHistory, error } = await supabase
+      .from('calculations')
+      .select('*')
+      .order('created_at', { ascending: false });
+    console.log('Supabase fetch result:', { dbHistory, error });
+    if (error) throw error;
+    
+    // Merge and deduplicate history items
+    const dbHistoryItems = dbHistory.map(item => ({
+      ...item,
+      id: item.id || generateId(),
+      startDate: item.startDate ? new Date(item.startDate) : null
+    }));
+    console.log('dbHistoryItems:', dbHistoryItems);
+    
+    // Combine both histories, removing duplicates based on createdAt
+    const combinedHistory = [...localHistoryItems];
+    dbHistoryItems.forEach(dbItem => {
+      if (!combinedHistory.some(localItem => localItem.createdAt === dbItem.created_at)) {
+        combinedHistory.push({
+          ...dbItem,
+          createdAt: dbItem.created_at
+        });
+      }
+    });
+    console.log('Combined history:', combinedHistory);
+    
+    return combinedHistory;
+  } catch (error) {
+    console.error('Failed to fetch calculations from database:', error);
+    return localHistoryItems;
+  }
 };
 
-// Delete a calculation from history
-export const deleteCalculation = (id: string): void => {
-  const history = getCalculationHistory();
+// Delete a calculation from both localStorage and database
+export const deleteCalculation = async (id: string): Promise<void> => {
+  // Delete from localStorage
+  const history = await getCalculationHistory();
   const updatedHistory = history.filter(item => item.id !== id);
   localStorage.setItem('calculationHistory', JSON.stringify(updatedHistory));
+  
+  // Delete from database
+  try {
+    await supabase.from('calculations').delete().eq('id', id);
+  } catch (error) {
+    console.error('Failed to delete calculation from database:', error);
+  }
 };
 
-// Clear all calculation history
-export const clearCalculationHistory = (): void => {
+// Clear all calculation history from both localStorage and database
+export const clearCalculationHistory = async (): Promise<void> => {
+  // Clear localStorage
   localStorage.setItem('calculationHistory', JSON.stringify([]));
+  
+  // Clear database
+  try {
+    await supabase.from('calculations').delete().neq('id', '');
+  } catch (error) {
+    console.error('Failed to clear calculations from database:', error);
+  }
+};
+
+// Calculate missing principal amount
+export const calculateMissingPrincipal = (
+  finalAmount: number,
+  rate: number,
+  time: number,
+  frequency: CompoundingFrequency
+): number => {
+  const n = getFrequencyValue(frequency);
+  return finalAmount / Math.pow(1 + (rate / 100) / n, n * time);
+};
+
+// Calculate missing final amount
+export const calculateMissingFinalAmount = (
+  principal: number,
+  rate: number,
+  time: number,
+  frequency: CompoundingFrequency
+): number => {
+  const n = getFrequencyValue(frequency);
+  return principal * Math.pow(1 + (rate / 100) / n, n * time);
+};
+
+// Calculate missing interest rate
+export const calculateMissingRate = (
+  principal: number,
+  finalAmount: number,
+  time: number,
+  frequency: CompoundingFrequency
+): number => {
+  const n = getFrequencyValue(frequency);
+  return n * (Math.pow(finalAmount / principal, 1 / (n * time)) - 1) * 100;
+};
+
+// Calculate missing time period
+export const calculateMissingTime = (
+  principal: number,
+  finalAmount: number,
+  rate: number,
+  frequency: CompoundingFrequency
+): number => {
+  const n = getFrequencyValue(frequency);
+  return Math.log(finalAmount / principal) / (n * Math.log(1 + (rate / 100) / n));
 };

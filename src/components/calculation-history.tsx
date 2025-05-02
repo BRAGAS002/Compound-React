@@ -6,7 +6,8 @@ import {
   CalculationParams, 
   deleteCalculation, 
   formatCurrency, 
-  getCalculationHistory 
+  getCalculationHistory,
+  clearCalculationHistory
 } from "@/utils/calculatorUtils";
 import { useToast } from "@/components/ui/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -20,37 +21,68 @@ interface HistoryProps {
 export function CalculationHistory({ onSelectHistory }: HistoryProps) {
   const [history, setHistory] = useState<CalculationHistoryType[]>([]);
   const [selectedItem, setSelectedItem] = useState<CalculationHistoryType | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     loadHistory();
   }, []);
 
-  const loadHistory = () => {
-    const calculationHistory = getCalculationHistory();
-    setHistory(calculationHistory);
-  };
-
-  const handleDelete = (id: string) => {
-    deleteCalculation(id);
-    loadHistory();
-    if (selectedItem?.id === id) {
-      setSelectedItem(null);
+  const loadHistory = async () => {
+    try {
+      setIsLoading(true);
+      const calculationHistory = await getCalculationHistory();
+      setHistory(calculationHistory);
+    } catch (error) {
+      console.error('Failed to load history:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load calculation history.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
-    toast({
-      title: "Calculation deleted",
-      description: "The calculation has been removed from history."
-    });
   };
 
-  const handleClearAll = () => {
-    localStorage.setItem('calculationHistory', JSON.stringify([]));
-    loadHistory();
-    setSelectedItem(null);
-    toast({
-      title: "History cleared",
-      description: "All calculations have been deleted from history."
-    });
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteCalculation(id);
+      await loadHistory();
+      if (selectedItem?.id === id) {
+        setSelectedItem(null);
+      }
+      toast({
+        title: "Calculation deleted",
+        description: "The calculation has been removed from history."
+      });
+    } catch (error) {
+      console.error('Failed to delete calculation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete calculation.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      await clearCalculationHistory();
+      await loadHistory();
+      setSelectedItem(null);
+      toast({
+        title: "History cleared",
+        description: "All calculations have been deleted from history."
+      });
+    } catch (error) {
+      console.error('Failed to clear history:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clear calculation history.",
+        variant: "destructive"
+      });
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -74,7 +106,7 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
         <CardTitle>Calculation History</CardTitle>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm" disabled={history.length === 0}>
+            <Button variant="outline" size="sm" disabled={history.length === 0 || isLoading}>
               Clear All
             </Button>
           </AlertDialogTrigger>
@@ -96,7 +128,11 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <ScrollArea className="h-72 rounded-md">
-            {history.length === 0 ? (
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Loading history...
+              </div>
+            ) : history.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 No calculation history yet
               </div>
