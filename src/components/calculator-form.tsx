@@ -112,17 +112,17 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
 
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Compound Interest Calculator</CardTitle>
-        <CardDescription>
+      <CardHeader className="px-4 sm:px-6">
+        <CardTitle className="text-xl sm:text-2xl">Compound Interest Calculator</CardTitle>
+        <CardDescription className="text-sm sm:text-base">
           Calculate how your investments will grow over time with compound interest.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <CardContent className="px-4 sm:px-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-2">
-              <Label htmlFor="principal">Principal Amount (₱)</Label>
+              <Label htmlFor="principal" className="text-sm sm:text-base">Principal Amount (₱)</Label>
               <Input
                 id="principal"
                 name="principal"
@@ -131,12 +131,12 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
                 step="100"
                 value={params.principal}
                 onChange={handleChange}
-                className="finance-input"
+                className="finance-input h-10 sm:h-11 text-sm sm:text-base"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="rate">Annual Interest Rate (%)</Label>
+              <Label htmlFor="rate" className="text-sm sm:text-base">Annual Interest Rate (%)</Label>
               <Input
                 id="rate"
                 name="rate"
@@ -145,12 +145,12 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
                 step="0.1"
                 value={params.rate}
                 onChange={handleChange}
-                className="finance-input"
+                className="finance-input h-10 sm:h-11 text-sm sm:text-base"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="time">Time Period (Years)</Label>
+              <Label htmlFor="time" className="text-sm sm:text-base">Time Period (Years)</Label>
               <Input
                 id="time"
                 name="time"
@@ -159,17 +159,17 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
                 step="1"
                 value={params.time}
                 onChange={handleChange}
-                className="finance-input"
+                className="finance-input h-10 sm:h-11 text-sm sm:text-base"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="frequency">Compounding Frequency</Label>
+              <Label htmlFor="frequency" className="text-sm sm:text-base">Compounding Frequency</Label>
               <Select 
                 value={params.frequency} 
                 onValueChange={handleFrequencyChange}
               >
-                <SelectTrigger id="frequency">
+                <SelectTrigger id="frequency" className="h-10 sm:h-11 text-sm sm:text-base">
                   <SelectValue placeholder="Select frequency" />
                 </SelectTrigger>
                 <SelectContent>
@@ -184,14 +184,14 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 sm:col-span-2">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="includeDate"
                   checked={includeDate}
                   onCheckedChange={(checked) => setIncludeDate(checked as boolean)}
                 />
-                <Label htmlFor="includeDate">Include Start Date</Label>
+                <Label htmlFor="includeDate" className="text-sm sm:text-base">Include Start Date</Label>
               </div>
               {includeDate && (
                 <Input
@@ -200,20 +200,20 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
                   type="date"
                   value={params.startDate ? params.startDate.toISOString().split('T')[0] : ''}
                   onChange={handleChange}
-                  className="finance-input"
+                  className="finance-input h-10 sm:h-11 text-sm sm:text-base"
                 />
               )}
             </div>
           </div>
 
-          <div className="flex gap-4">
-            <Button type="submit" className="flex-1 finance-btn">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Button type="submit" className="w-full sm:flex-1 finance-btn h-10 sm:h-11 text-sm sm:text-base">
               Calculate
             </Button>
             <Button
               type="button"
               variant="outline"
-              className="flex-1"
+              className="w-full sm:flex-1 h-10 sm:h-11 text-sm sm:text-base"
               onClick={() => {
                 setParams({
                   principal: "" as any,

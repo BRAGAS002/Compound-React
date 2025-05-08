@@ -15,6 +15,7 @@ export interface CalculationParams {
   time: number;
   frequency: CompoundingFrequency;
   startDate?: Date | null;
+  targetAmount?: number;
 }
 
 export interface YearlyBreakdown {
@@ -31,9 +32,12 @@ export interface CalculationResult {
   formula: string;
 }
 
-export interface CalculationHistory extends CalculationParams, CalculationResult {
+export interface CalculationHistory extends Omit<CalculationParams, 'targetAmount'> {
   id: string;
   createdAt: string;
+  finalAmount: number;
+  totalInterest: number;
+  formula: string;
 }
 
 // Get frequency value as number of compounds per year
@@ -167,7 +171,10 @@ export const saveCalculation = async (params: CalculationParams, result: Calcula
     ...params,
     ...result,
     id: generateId(),
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    finalAmount: result.finalAmount,
+    totalInterest: result.totalInterest,
+    formula: result.formula
   };
   
   // Save to localStorage
@@ -182,13 +189,19 @@ export const saveCalculation = async (params: CalculationParams, result: Calcula
       rate: params.rate,
       time: params.time,
       frequency: params.frequency,
-      startDate: params.startDate?.toISOString() ?? null,
-      finalAmount: result.finalAmount,
-      totalInterest: result.totalInterest,
+      start_date: params.startDate?.toISOString() ?? null,
+      final_amount: result.finalAmount,
+      total_interest: result.totalInterest,
       formula: result.formula,
       created_at: historyItem.createdAt
     }]);
-    console.log('Supabase insert result:', { data, error });
+    
+    if (error) {
+      console.error('Supabase insert error:', error);
+      throw error;
+    }
+    
+    console.log('Successfully saved to Supabase:', data);
   } catch (error) {
     console.error('Failed to save calculation to database:', error);
   }
@@ -206,28 +219,33 @@ export const getCalculationHistory = async (): Promise<CalculationHistory[]> => 
       .from('calculations')
       .select('*')
       .order('created_at', { ascending: false });
-    console.log('Supabase fetch result:', { dbHistory, error });
-    if (error) throw error;
+      
+    if (error) {
+      console.error('Supabase fetch error:', error);
+      throw error;
+    }
     
     // Merge and deduplicate history items
     const dbHistoryItems = dbHistory.map(item => ({
-      ...item,
-      id: item.id || generateId(),
-      startDate: item.startDate ? new Date(item.startDate) : null
+      id: item.id,
+      principal: item.principal,
+      rate: item.rate,
+      time: item.time,
+      frequency: item.frequency,
+      startDate: item.start_date ? new Date(item.start_date) : null,
+      finalAmount: item.final_amount,
+      totalInterest: item.total_interest,
+      formula: item.formula,
+      createdAt: item.created_at
     }));
-    console.log('dbHistoryItems:', dbHistoryItems);
     
     // Combine both histories, removing duplicates based on createdAt
     const combinedHistory = [...localHistoryItems];
     dbHistoryItems.forEach(dbItem => {
-      if (!combinedHistory.some(localItem => localItem.createdAt === dbItem.created_at)) {
-        combinedHistory.push({
-          ...dbItem,
-          createdAt: dbItem.created_at
-        });
+      if (!combinedHistory.some(localItem => localItem.createdAt === dbItem.createdAt)) {
+        combinedHistory.push(dbItem);
       }
     });
-    console.log('Combined history:', combinedHistory);
     
     return combinedHistory;
   } catch (error) {
@@ -245,7 +263,15 @@ export const deleteCalculation = async (id: string): Promise<void> => {
   
   // Delete from database
   try {
-    await supabase.from('calculations').delete().eq('id', id);
+    const { error } = await supabase
+      .from('calculations')
+      .delete()
+      .eq('id', id);
+      
+    if (error) {
+      console.error('Supabase delete error:', error);
+      throw error;
+    }
   } catch (error) {
     console.error('Failed to delete calculation from database:', error);
   }

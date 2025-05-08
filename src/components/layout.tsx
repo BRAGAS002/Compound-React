@@ -14,6 +14,7 @@ export function Layout({ children }: LayoutProps) {
         backgroundSize: 'cover',
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'center center',
+        backgroundAttachment: 'fixed',
       }}
     >
       {/* Blurred overlay */}
@@ -32,9 +33,9 @@ export function Layout({ children }: LayoutProps) {
       />
       <div style={{ position: 'relative', zIndex: 1 }}>
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container flex h-14 items-center justify-between">
+          <div className="container px-4 sm:px-6 flex h-14 items-center justify-between">
             <div className="mr-4 flex">
-              <h1 className="font-bold text-xl">Compound Interest Calculator</h1>
+              <h1 className="font-bold text-lg sm:text-xl">Compound Interest Calculator</h1>
             </div>
             <div className="flex items-center justify-between space-x-2">
               <ThemeToggle />
@@ -42,10 +43,10 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </header>
 
-        <main className="container py-6">{children}</main>
+        <main className="container px-4 sm:px-6 py-4 sm:py-6 max-w-4xl mx-auto">{children}</main>
 
         <footer className="border-t">
-          <div className="container flex h-14 items-center justify-between text-sm">
+          <div className="container px-4 sm:px-6 flex h-14 items-center justify-between text-xs sm:text-sm">
             <p>© {new Date().getFullYear()} Compound Interest Calculator. All rights reserved.</p>
           </div>
         </footer>

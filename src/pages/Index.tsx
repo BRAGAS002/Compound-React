@@ -35,10 +35,10 @@ const Index = () => {
           }}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-3 mb-8">
-            <TabsTrigger value="calculator">Calculator</TabsTrigger>
-            <TabsTrigger value="missing-value">Compute Missing Value</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-1 mb-8">
+            <TabsTrigger value="calculator" className="text-xs sm:text-sm py-2 sm:py-1.5">Calculator</TabsTrigger>
+            <TabsTrigger value="missing-value" className="text-xs sm:text-sm py-2 sm:py-1.5">Compute Missing Value</TabsTrigger>
+            <TabsTrigger value="history" className="text-xs sm:text-sm py-2 sm:py-1.5">History</TabsTrigger>
           </TabsList>
           
           <TabsContent value="calculator" className="space-y-8">

@@ -102,54 +102,54 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
 
   return (
     <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Calculation History</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between px-4 sm:px-6">
+        <CardTitle className="text-xl sm:text-2xl">Calculation History</CardTitle>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm" disabled={history.length === 0 || isLoading}>
+            <Button variant="outline" size="sm" disabled={history.length === 0 || isLoading} className="text-xs sm:text-sm">
               Clear All
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent>
+          <AlertDialogContent className="max-w-[90vw] sm:max-w-md">
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
+              <AlertDialogTitle className="text-lg sm:text-xl">Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription className="text-sm sm:text-base">
                 This will permanently delete all your saved calculations.
                 This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleClearAll}>Continue</AlertDialogAction>
+              <AlertDialogCancel className="text-sm sm:text-base">Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleClearAll} className="text-sm sm:text-base">Continue</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ScrollArea className="h-72 rounded-md">
+      <CardContent className="px-4 sm:px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ScrollArea className="h-[300px] sm:h-[400px] rounded-md">
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-muted-foreground text-sm sm:text-base">
                 Loading history...
               </div>
             ) : history.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-muted-foreground text-sm sm:text-base">
                 No calculation history yet
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {history.map((item) => (
                   <div 
                     key={item.id} 
-                    className={`border rounded-lg p-4 hover:bg-accent/50 cursor-pointer ${
+                    className={`border rounded-lg p-3 sm:p-4 hover:bg-accent/50 cursor-pointer ${
                       selectedItem?.id === item.id ? 'bg-accent' : ''
                     }`}
                     onClick={() => handleItemClick(item)}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <h4 className="font-medium">{formatCurrency(item.principal)} invested for {item.time} years</h4>
-                        <p className="text-sm text-muted-foreground">
+                        <h4 className="font-medium text-sm sm:text-base">{formatCurrency(item.principal)} invested for {item.time} years</h4>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           {item.rate}% compounded {item.frequency}
                         </p>
                       </div>
@@ -160,18 +160,19 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
                           e.stopPropagation();
                           handleDelete(item.id);
                         }}
+                        className="text-xs sm:text-sm"
                       >
                         Delete
                       </Button>
                     </div>
                     <div className="flex justify-between items-center">
-                      <div className="text-sm">
+                      <div className="text-xs sm:text-sm">
                         <p className="flex gap-2 items-center">
-                          <Badge variant="outline" className="text-xs">Final</Badge>
+                          <Badge variant="outline" className="text-[10px] sm:text-xs">Final</Badge>
                           {formatCurrency(item.finalAmount)}
                         </p>
                       </div>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-[10px] sm:text-xs text-muted-foreground">
                         {formatDate(item.createdAt)}
                       </span>
                     </div>
@@ -182,9 +183,9 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
           </ScrollArea>
           
           {selectedItem && (
-            <div className="border rounded-lg p-4">
-              <h3 className="font-semibold mb-4">Calculation Details</h3>
-              <div className="space-y-2">
+            <div className="border rounded-lg p-3 sm:p-4">
+              <h3 className="font-semibold mb-3 sm:mb-4 text-base sm:text-lg">Calculation Details</h3>
+              <div className="space-y-2 text-sm sm:text-base">
                 <p><strong>Principal:</strong> {formatCurrency(selectedItem.principal)}</p>
                 <p><strong>Annual Rate:</strong> {selectedItem.rate}%</p>
                 <p><strong>Time Period:</strong> {selectedItem.time} years</p>

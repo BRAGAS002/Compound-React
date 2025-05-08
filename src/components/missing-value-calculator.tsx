@@ -13,7 +13,9 @@ import {
   calculateMissingTime,
   formatCurrency,
   saveCalculation,
-  calculateCompoundInterest
+  calculateCompoundInterest,
+  CalculationParams,
+  getFormula
 } from "@/utils/calculatorUtils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -69,7 +71,6 @@ const solveOptions = [
 
 export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: MissingValueCalculatorProps) {
   const [values, setValues] = useState<StoredValues>(() => {
-    // On mount, set sample values except for the field being solved for
     const initial = { ...SAMPLE_VALUES };
     initial[solveFor] = "";
     return initial;
@@ -125,42 +126,38 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
     }
   };
 
-  const calculateMissingValue = async () => {
-    // Prevent calculation if any required field is empty
+  const handleCalculate = async () => {
+    // Validate required fields
     const requiredFields = ['principal', 'rate', 'time', 'finalAmount'].filter(f => f !== solveFor);
     for (const field of requiredFields) {
       if (!values[field as keyof StoredValues] || values[field as keyof StoredValues].trim() === '') {
         toast({
           title: "Missing Input",
-          description: <code style={{ whiteSpace: 'pre-wrap' }}>Please fill in all required fields before calculating.</code>,
+          description: "Please fill in all required fields before calculating.",
           variant: "destructive"
         });
         return;
       }
     }
+
     // Clean and parse all non-empty values
-    const numericValues: NumericValues = {
-      principal: solveFor !== 'principal' && values.principal.trim() !== "" && !isNaN(Number(cleanNumberInput(values.principal))) ? parseFloat(cleanNumberInput(values.principal)) : null,
-      rate: solveFor !== 'rate' && values.rate.trim() !== "" && !isNaN(Number(cleanNumberInput(values.rate))) ? parseFloat(cleanNumberInput(values.rate)) : null,
-      time: solveFor !== 'time' && values.time.trim() !== "" && !isNaN(Number(cleanNumberInput(values.time))) ? parseFloat(cleanNumberInput(values.time)) : null,
-      finalAmount: solveFor !== 'finalAmount' && values.finalAmount.trim() !== "" && !isNaN(Number(cleanNumberInput(values.finalAmount))) ? parseFloat(cleanNumberInput(values.finalAmount)) : null,
+    const numericValues = {
+      principal: solveFor !== 'principal' ? Number(cleanNumberInput(values.principal)) : null,
+      rate: solveFor !== 'rate' ? Number(cleanNumberInput(values.rate)) : null,
+      time: solveFor !== 'time' ? Number(cleanNumberInput(values.time)) : null,
+      finalAmount: solveFor !== 'finalAmount' ? Number(cleanNumberInput(values.finalAmount)) : null,
       frequency: values.frequency
     };
 
-    // Validate required fields
+    // Validate numeric values
     for (const [key, value] of Object.entries(numericValues)) {
-      if (key !== 'frequency' && key !== solveFor && (value === null || isNaN(value))) {
+      if (key === 'frequency') continue;
+      if (key === solveFor) continue;
+      
+      if (typeof value === 'number' && (isNaN(value) || value < 0)) {
         toast({
           title: "Invalid Input",
-          description: <code style={{ whiteSpace: 'pre-wrap' }}>{`Please enter a valid number for ${key}.`}</code>,
-          variant: "destructive"
-        });
-        return;
-      }
-      if (key !== 'frequency' && key !== solveFor && value !== null && value < 0) {
-        toast({
-          title: "Invalid Input",
-          description: <code style={{ whiteSpace: 'pre-wrap' }}>{`Please enter a non-negative number for ${key}.`}</code>,
+          description: `Please enter a valid non-negative number for ${key}.`,
           variant: "destructive"
         });
         return;
@@ -168,62 +165,123 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
     }
 
     let result: number;
-    let resultField: keyof NumericValues = solveFor;
+    let params: CalculationParams;
 
-    // Calculate the selected variable
-    if (solveFor === 'principal') {
-      result = calculateMissingPrincipal(
-        numericValues.finalAmount!,
-        numericValues.rate!,
-        numericValues.time!,
-        numericValues.frequency
-      );
-      setValues(prev => ({ ...prev, principal: formatResult(result, resultField) }));
-    } else if (solveFor === 'finalAmount') {
-      result = calculateMissingFinalAmount(
-        numericValues.principal!,
-        numericValues.rate!,
-        numericValues.time!,
-        numericValues.frequency
-      );
-      setValues(prev => ({ ...prev, finalAmount: formatResult(result, resultField) }));
-    } else if (solveFor === 'rate') {
-      result = calculateMissingRate(
-        numericValues.principal!,
-        numericValues.finalAmount!,
-        numericValues.time!,
-        numericValues.frequency
-      );
-      setValues(prev => ({ ...prev, rate: formatResult(result, resultField) }));
-    } else if (solveFor === 'time') {
-      result = calculateMissingTime(
-        numericValues.principal!,
-        numericValues.finalAmount!,
-        numericValues.rate!,
-        numericValues.frequency
-      );
-      setValues(prev => ({ ...prev, time: formatResult(result, resultField) }));
+    switch (solveFor) {
+      case 'principal':
+        result = calculateMissingPrincipal(
+          numericValues.finalAmount!,
+          numericValues.rate!,
+          numericValues.time!,
+          numericValues.frequency
+        );
+        params = {
+          principal: result,
+          rate: numericValues.rate!,
+          time: numericValues.time!,
+          frequency: numericValues.frequency,
+          targetAmount: numericValues.finalAmount!
+        };
+        break;
+      case 'finalAmount':
+        result = calculateMissingFinalAmount(
+          numericValues.principal!,
+          numericValues.rate!,
+          numericValues.time!,
+          numericValues.frequency
+        );
+        params = {
+          principal: numericValues.principal!,
+          rate: numericValues.rate!,
+          time: numericValues.time!,
+          frequency: numericValues.frequency,
+          targetAmount: result
+        };
+        break;
+      case 'rate':
+        result = calculateMissingRate(
+          numericValues.principal!,
+          numericValues.finalAmount!,
+          numericValues.time!,
+          numericValues.frequency
+        );
+        params = {
+          principal: numericValues.principal!,
+          rate: result,
+          time: numericValues.time!,
+          frequency: numericValues.frequency,
+          targetAmount: numericValues.finalAmount!
+        };
+        break;
+      case 'time':
+        result = calculateMissingTime(
+          numericValues.principal!,
+          numericValues.finalAmount!,
+          numericValues.rate!,
+          numericValues.frequency
+        );
+        params = {
+          principal: numericValues.principal!,
+          rate: numericValues.rate!,
+          time: result,
+          frequency: numericValues.frequency,
+          targetAmount: numericValues.finalAmount!
+        };
+        break;
     }
 
-    // Prepare calculation params for saving
-    const params = {
-      principal: values.principal.trim() === "" ? null : parseFloat(values.principal),
-      rate: values.rate.trim() === "" ? null : parseFloat(values.rate),
-      time: values.time.trim() === "" ? null : parseFloat(values.time),
-      frequency: values.frequency,
-      startDate: null
+    const calculationResult = calculateCompoundInterest(params);
+    // Add the specific formula used for the missing value calculation
+    let formula: string;
+    if (params.frequency === 'continuously') {
+      switch (solveFor) {
+        case 'principal':
+          formula = 'P = A / e^(rt)';
+          break;
+        case 'finalAmount':
+          formula = 'A = P × e^(rt)';
+          break;
+        case 'rate':
+          formula = 'r = ln(A/P) / t';
+          break;
+        case 'time':
+          formula = 't = ln(A/P) / r';
+          break;
+      }
+    } else {
+      switch (solveFor) {
+        case 'principal':
+          formula = 'P = A / (1 + r/n)^(nt)';
+          break;
+        case 'finalAmount':
+          formula = 'A = P(1 + r/n)^(nt)';
+          break;
+        case 'rate':
+          formula = 'r = n((A/P)^(1/nt) - 1)';
+          break;
+        case 'time':
+          formula = 't = log(A/P) / (n × log(1 + r/n))';
+          break;
+      }
+    }
+    calculationResult.formula = formula;
+    
+    await saveCalculation(params, calculationResult);
+    
+    // Convert params to the expected format for onCalculate
+    const calculateParams = {
+      principal: params.principal,
+      rate: params.rate,
+      time: params.time,
+      frequency: params.frequency,
+      finalAmount: params.targetAmount || calculationResult.finalAmount
     };
-    const resultObj = calculateCompoundInterest(params as any);
-
-    // Save to history (local + Supabase)
-    await saveCalculation(params, resultObj);
-
-    // Notify parent (if needed)
-    onCalculate({ ...params, finalAmount: resultObj.finalAmount }, solveFor);
+    
+    onCalculate(calculateParams, solveFor);
 
     toast({
       title: "Calculation Complete",
-      description: `The missing value has been calculated: ${formatResult(result!, resultField!)}`,
+      description: `The missing value has been calculated: ${formatResult(result, solveFor)}`,
     });
   };
 
@@ -352,7 +410,7 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
             <Button 
               type="button" 
               className="flex-1 finance-btn"
-              onClick={calculateMissingValue}
+              onClick={handleCalculate}
             >
               Calculate Missing Value
             </Button>
