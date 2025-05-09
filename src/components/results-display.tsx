@@ -310,6 +310,15 @@ export function ResultsDisplay({ params, solveFor }: ResultsDisplayProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {/* Initial row for period 0 */}
+                  <TableRow key={0}>
+                    <TableCell className="whitespace-nowrap">0</TableCell>
+                    {displayParams.startDate && <TableCell className="whitespace-nowrap">{displayParams.startDate instanceof Date ? displayParams.startDate.toISOString().split('T')[0] : ''}</TableCell>}
+                    <TableCell className="whitespace-nowrap">{formatCurrency(displayParams.principal)}</TableCell>
+                    <TableCell className="whitespace-nowrap">{formatCurrency(0)}</TableCell>
+                    <TableCell className="whitespace-nowrap">{formatCurrency(0)}</TableCell>
+                  </TableRow>
+                  {/* Actual breakdown rows */}
                   {result.yearlyBreakdown.map((row) => {
                     // Calculate total interest earned up to this point
                     const totalInterestToDate = row.amount - displayParams.principal;
@@ -338,10 +347,10 @@ export function ResultsDisplay({ params, solveFor }: ResultsDisplayProps) {
               {/* Variable Definitions */}
               <div className="mt-4 space-y-2 text-sm sm:text-base">
                 <p><strong>Where:</strong></p>
-                <p>CI = Compound Interest ({formatCurrency(result.finalAmount)})</p>
-                <p>P = Principal ({formatCurrency(displayParams.principal)})</p>
-                <p>r = Annual interest rate ({displayParams.rate}%)</p>
-                <p>t = Time period ({displayParams.time} years)</p>
+                <p>CI = Compound Interest ({solveFor === 'finalAmount' || solveFor === undefined ? '?' : formatCurrency(result.finalAmount)})</p>
+                <p>P = Principal ({solveFor === 'principal' ? '?' : formatCurrency(displayParams.principal)})</p>
+                <p>r = Annual interest rate ({solveFor === 'rate' ? '?' : displayParams.rate}%)</p>
+                <p>t = Time period ({solveFor === 'time' ? '?' : displayParams.time} years)</p>
                 {displayParams.frequency !== 'continuously' && (
                   <p>n = Number of times compounded per year ({getFrequencyNumber(displayParams.frequency)})</p>
                 )}
