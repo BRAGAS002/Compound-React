@@ -61,28 +61,28 @@ function getFormulaForSolveFor(solveFor: string | undefined, frequency: string):
     case 'principal':
       return (
         <>
-          P = <span>FV / (1 + r/n)<sup>nt</sup></span>
+          P = <span>CI / (1 + r/n)<sup>nt</sup></span>
         </>
       );
-    // Formula for Future Value (FV)
+    // Formula for Future Value (CI)
     case 'finalAmount':
       return (
         <>
-          FV = <span>P(1 + r/n)<sup>nt</sup></span>
+          CI = <span>P(1 + r/n)<sup>nt</sup></span>
         </>
       );
     // Formula for Rate
     case 'rate':
       return (
         <>
-          r = <span>n((FV/P)<sup>1/nt</sup> - 1)</span>
+          r = <span>n((CI/P)<sup>1/nt</sup> - 1)</span>
         </>
       );
     // Formula for Time
     case 'time':
       return (
         <>
-          t = <span>ln(FV/P) / (n × ln(1 + r/n))</span>
+          t = <span>ln(CI/P) / (n × ln(1 + r/n))</span>
         </>
       );
     // Default: Compound Interest (CI)
@@ -112,7 +112,7 @@ function getStepByStepCalculation(params: CalculationParams, solveFor: string | 
   switch (solveFor) {
     case 'principal':
       return [
-        <><b>P = FV / (1 + r/n)<sup>nt</sup></b></>,
+        <><b>P = CI / (1 + r/n)<sup>nt</sup></b></>,
         <>
           P = {formatCurrency(finalAmount)} / (1 + {rateDecimal.toFixed(4)}/{nValue})<sup>{nValue}×{time}</sup>
         </>,
@@ -128,23 +128,23 @@ function getStepByStepCalculation(params: CalculationParams, solveFor: string | 
       ];
     case 'finalAmount':
       return [
-        <><b>FV = P(1 + r/n)<sup>nt</sup></b></>,
+        <><b>CI = P(1 + r/n)<sup>nt</sup></b></>,
         <>
-          FV = {formatCurrency(principal)}(1 + {rateDecimal.toFixed(4)}/{nValue})<sup>{nValue}×{time}</sup>
+          CI = {formatCurrency(principal)}(1 + {rateDecimal.toFixed(4)}/{nValue})<sup>{nValue}×{time}</sup>
         </>,
         <>
-          FV = {formatCurrency(principal)}({(1 + rateDecimal/nValue).toFixed(4)})<sup>{nValue * time}</sup>
+          CI = {formatCurrency(principal)}({(1 + rateDecimal/nValue).toFixed(4)})<sup>{nValue * time}</sup>
         </>,
         <>
-          FV = {formatCurrency(principal)} × {Math.pow(1 + rateDecimal/nValue, nValue * time).toFixed(4)}
+          CI = {formatCurrency(principal)} × {Math.pow(1 + rateDecimal/nValue, nValue * time).toFixed(4)}
         </>,
         <>
-          FV = {formatCurrency(finalAmount)}
+          CI = {formatCurrency(finalAmount)}
         </>
       ];
     case 'rate':
       return [
-        <><b>r = n((FV/P)<sup>1/nt</sup> - 1)</b></>,
+        <><b>r = n((CI/P)<sup>1/nt</sup> - 1)</b></>,
         <>
           r = {nValue}(( {formatCurrency(finalAmount)}/{formatCurrency(principal)} )<sup>1/({nValue}×{time})</sup> - 1)
         </>,
@@ -160,7 +160,7 @@ function getStepByStepCalculation(params: CalculationParams, solveFor: string | 
       ];
     case 'time':
       return [
-        <><b>t = ln(FV/P) / (n × ln(1 + r/n))</b></>,
+        <><b>t = ln(CI/P) / (n × ln(1 + r/n))</b></>,
         <>
           t = ln({formatCurrency(finalAmount)}/{formatCurrency(principal)}) / ({nValue} × ln(1 + {rateDecimal.toFixed(4)}/{nValue}))
         </>,
