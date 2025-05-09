@@ -6,6 +6,26 @@
  * 2. Table - Detailed breakdown of the investment growth over time
  * 3. Formula - Shows the mathematical formula used and step-by-step calculations
  * 
+ * Table Calculation Formula:
+ * For each period (payment number):
+ * 1. Balance = P(1 + r/n)^(nt)
+ *    where:
+ *    - P = Principal amount
+ *    - r = Annual interest rate (as decimal)
+ *    - n = Number of compounds per year
+ *    - t = Time period in years
+ * 
+ * 2. Interest Earned = Current Balance - Previous Balance
+ *    (For first period, Previous Balance = Principal)
+ * 
+ * 3. Total Interest = Current Balance - Principal
+ * 
+ * Example for monthly compounding (n=12):
+ * - Period 1: Balance = P(1 + r/12)^(12 × 1/12)
+ * - Period 2: Balance = P(1 + r/12)^(12 × 2/12)
+ * - Period 3: Balance = P(1 + r/12)^(12 × 3/12)
+ * And so on...
+ * 
  * Features:
  * - Responsive design for different screen sizes
  * - Dynamic formula display based on what was calculated
@@ -190,7 +210,7 @@ export function ResultsDisplay({ params, solveFor }: ResultsDisplayProps) {
             )}
           </TabsContent>
 
-          {/* Year by Year Breakdown Tab */}
+          {/* Table Tab - Shows detailed breakdown */}
           <TabsContent value="breakdown">
             <div className="rounded-md border overflow-x-auto">
               <Table>
@@ -205,6 +225,7 @@ export function ResultsDisplay({ params, solveFor }: ResultsDisplayProps) {
                 </TableHeader>
                 <TableBody>
                   {result.yearlyBreakdown.map((row) => {
+                    // Calculate total interest earned up to this point
                     const totalInterestToDate = row.amount - displayParams.principal;
                     return (
                       <TableRow key={row.year}>

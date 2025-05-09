@@ -104,8 +104,7 @@ function cleanNumberInput(input: string): string {
 const solveOptions = [
   { value: 'principal', label: 'Principal (P)' },
   { value: 'rate', label: 'Annual Interest Rate (r)' },
-  { value: 'time', label: 'Time Period (t)' },
-  { value: 'finalAmount', label: 'Future Value (A)' },
+  { value: 'time', label: 'Time Period (t)' }
 ];
 
 export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: MissingValueCalculatorProps) {
@@ -188,7 +187,7 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
    */
   const handleCalculate = async () => {
     // Validate required fields
-    const requiredFields = ['principal', 'rate', 'time', 'finalAmount'].filter(f => f !== solveFor);
+    const requiredFields = ['principal', 'rate', 'time'].filter(f => f !== solveFor);
     for (const field of requiredFields) {
       if (!values[field as keyof StoredValues] || values[field as keyof StoredValues].trim() === '') {
         toast({
@@ -205,7 +204,7 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
       principal: solveFor !== 'principal' ? Number(cleanNumberInput(values.principal)) : null,
       rate: solveFor !== 'rate' ? Number(cleanNumberInput(values.rate)) : null,
       time: solveFor !== 'time' ? Number(cleanNumberInput(values.time)) : null,
-      finalAmount: solveFor !== 'finalAmount' ? Number(cleanNumberInput(values.finalAmount)) : null,
+      finalAmount: Number(cleanNumberInput(values.finalAmount)),
       frequency: values.frequency
     };
 
@@ -242,21 +241,6 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
           time: numericValues.time!,
           frequency: numericValues.frequency,
           targetAmount: numericValues.finalAmount!
-        };
-        break;
-      case 'finalAmount':
-        result = calculateMissingFinalAmount(
-          numericValues.principal!,
-          numericValues.rate!,
-          numericValues.time!,
-          numericValues.frequency
-        );
-        params = {
-          principal: numericValues.principal!,
-          rate: numericValues.rate!,
-          time: numericValues.time!,
-          frequency: numericValues.frequency,
-          targetAmount: result
         };
         break;
       case 'rate':
@@ -408,7 +392,6 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
                 onChange={handleChange}
                 className="finance-input"
                 placeholder="Enter future value"
-                disabled={solveFor === 'finalAmount'}
               />
             </div>
             <div className="space-y-2">
