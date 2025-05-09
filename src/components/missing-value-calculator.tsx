@@ -1,3 +1,21 @@
+/**
+ * MissingValueCalculator Component
+ * 
+ * A specialized calculator that allows users to solve for any one of the four main variables
+ * in compound interest calculations:
+ * - Principal (P): Initial investment amount
+ * - Rate (r): Annual interest rate
+ * - Time (t): Investment period in years
+ * - Final Amount (A): Future value of the investment
+ * 
+ * Features:
+ * - Dynamic form that disables the field being solved for
+ * - Input validation and error handling
+ * - Local storage persistence
+ * - Responsive design
+ * - Detailed calculation steps
+ */
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +37,12 @@ import {
 } from "@/utils/calculatorUtils";
 import { supabase } from "@/integrations/supabase/client";
 
+/**
+ * Props interface for the MissingValueCalculator component
+ * @property onCalculate - Callback function that receives calculation parameters and the solved value
+ * @property solveFor - The variable currently being solved for
+ * @property setSolveFor - Function to update which variable to solve for
+ */
 interface MissingValueCalculatorProps {
   onCalculate: (params: {
     principal: number;
@@ -31,6 +55,10 @@ interface MissingValueCalculatorProps {
   setSolveFor: (solveFor: 'principal' | 'rate' | 'time' | 'finalAmount') => void;
 }
 
+/**
+ * Interface for numeric values used in calculations
+ * All fields are nullable except frequency
+ */
 interface NumericValues {
   principal: number | null;
   rate: number | null;
@@ -39,6 +67,10 @@ interface NumericValues {
   frequency: CompoundingFrequency;
 }
 
+/**
+ * Interface for stored form values
+ * All fields are strings except frequency
+ */
 interface StoredValues {
   principal: string;
   rate: string;
@@ -47,21 +79,28 @@ interface StoredValues {
   finalAmount: string;
 }
 
+// Storage key for persisting form values
 const STORAGE_KEY = 'missingValueCalculator';
 
+// Default values for the form
 const SAMPLE_VALUES: StoredValues = {
-  principal: "1000",
-  rate: "5",
-  time: "2",
+  principal: "",
+  rate: "",
+  time: "",
   frequency: "monthly",
-  finalAmount: "1100"
+  finalAmount: ""
 };
 
+/**
+ * Cleans numeric input by removing non-numeric characters
+ * @param input - The input string to clean
+ * @returns Cleaned numeric string
+ */
 function cleanNumberInput(input: string): string {
-  // Remove all non-numeric, non-decimal, non-minus characters
   return input.replace(/[^0-9.-]/g, '');
 }
 
+// Available options for what to solve for
 const solveOptions = [
   { value: 'principal', label: 'Principal (P)' },
   { value: 'rate', label: 'Annual Interest Rate (r)' },
@@ -70,6 +109,7 @@ const solveOptions = [
 ];
 
 export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: MissingValueCalculatorProps) {
+  // Initialize form state
   const [values, setValues] = useState<StoredValues>(() => {
     const initial = { ...SAMPLE_VALUES };
     initial[solveFor] = "";
@@ -77,7 +117,7 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
   });
   const { toast } = useToast();
 
-  // When solveFor changes, set sample values and clear the field to solve for
+  // Reset the field being solved for when solveFor changes
   useEffect(() => {
     setValues(prev => {
       const newValues = { ...SAMPLE_VALUES };
@@ -86,19 +126,26 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
     });
   }, [solveFor]);
 
-  // Save values to localStorage whenever they change
+  // Persist form values to localStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(values));
   }, [values]);
 
+  /**
+   * Handles changes to input fields
+   * Cleans numeric input and updates state
+   */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setValues(prev => ({
       ...prev,
-      [name]: value
+      [name]: value === '' ? '' : cleanNumberInput(value)
     }));
   };
 
+  /**
+   * Updates compounding frequency when user selects a new option
+   */
   const handleFrequencyChange = (value: string) => {
     setValues(prev => ({
       ...prev,
@@ -106,12 +153,21 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
     }));
   };
 
+  /**
+   * Updates which variable to solve for
+   * Clears the field that will be calculated
+   */
   const handleSolveForChange = (value: string) => {
     setSolveFor(value as 'principal' | 'rate' | 'time' | 'finalAmount');
-    // Optionally clear the field to be solved for
     setValues(prev => ({ ...prev, [value]: "" }));
   };
 
+  /**
+   * Formats the calculation result based on the field type
+   * @param value - The calculated value
+   * @param field - The field being calculated
+   * @returns Formatted string representation of the value
+   */
   const formatResult = (value: number, field: keyof NumericValues): string => {
     switch (field) {
       case 'principal':
@@ -126,6 +182,10 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
     }
   };
 
+  /**
+   * Handles the calculation process
+   * Validates inputs and performs the appropriate calculation
+   */
   const handleCalculate = async () => {
     // Validate required fields
     const requiredFields = ['principal', 'rate', 'time', 'finalAmount'].filter(f => f !== solveFor);
@@ -140,7 +200,7 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
       }
     }
 
-    // Clean and parse all non-empty values
+    // Parse numeric values
     const numericValues = {
       principal: solveFor !== 'principal' ? Number(cleanNumberInput(values.principal)) : null,
       rate: solveFor !== 'rate' ? Number(cleanNumberInput(values.rate)) : null,
@@ -164,6 +224,7 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
       }
     }
 
+    // Perform calculation based on what we're solving for
     let result: number;
     let params: CalculationParams;
 
@@ -230,54 +291,17 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
         break;
     }
 
+    // Save calculation and notify user
     const calculationResult = calculateCompoundInterest(params);
-    // Add the specific formula used for the missing value calculation
-    let formula: string;
-    if (params.frequency === 'continuously') {
-      switch (solveFor) {
-        case 'principal':
-          formula = 'P = A / e^(rt)';
-          break;
-        case 'finalAmount':
-          formula = 'A = P × e^(rt)';
-          break;
-        case 'rate':
-          formula = 'r = ln(A/P) / t';
-          break;
-        case 'time':
-          formula = 't = ln(A/P) / r';
-          break;
-      }
-    } else {
-      switch (solveFor) {
-        case 'principal':
-          formula = 'P = A / (1 + r/n)^(nt)';
-          break;
-        case 'finalAmount':
-          formula = 'A = P(1 + r/n)^(nt)';
-          break;
-        case 'rate':
-          formula = 'r = n((A/P)^(1/nt) - 1)';
-          break;
-        case 'time':
-          formula = 't = log(A/P) / (n × log(1 + r/n))';
-          break;
-      }
-    }
-    calculationResult.formula = formula;
-    
     await saveCalculation(params, calculationResult);
     
-    // Convert params to the expected format for onCalculate
-    const calculateParams = {
+    onCalculate({
       principal: params.principal,
       rate: params.rate,
       time: params.time,
       frequency: params.frequency,
       finalAmount: params.targetAmount || calculationResult.finalAmount
-    };
-    
-    onCalculate(calculateParams, solveFor);
+    }, solveFor);
 
     toast({
       title: "Calculation Complete",
@@ -285,6 +309,9 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
     });
   };
 
+  /**
+   * Resets all form fields to their default values
+   */
   const resetFields = () => {
     setValues({
       principal: "",
@@ -293,7 +320,6 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
       frequency: "annually",
       finalAmount: ""
     });
-    // Clear localStorage when resetting
     localStorage.removeItem(STORAGE_KEY);
     toast({
       title: "Fields Reset",
@@ -401,7 +427,6 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
                   <SelectItem value="monthly">Monthly</SelectItem>
                   <SelectItem value="weekly">Weekly</SelectItem>
                   <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="continuously">Continuously</SelectItem>
                 </SelectContent>
               </Select>
             </div>

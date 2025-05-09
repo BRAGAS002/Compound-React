@@ -1,46 +1,58 @@
 import { supabase } from "@/integrations/supabase/client";
 
+/**
+ * Types and Interfaces
+ */
+
+// Define possible compounding frequencies
 export type CompoundingFrequency = 
   | 'annually' 
   | 'semi-annually' 
   | 'quarterly' 
   | 'monthly' 
   | 'weekly' 
-  | 'daily' 
-  | 'continuously';
+  | 'daily';
 
+// Parameters required for compound interest calculation
 export interface CalculationParams {
-  principal: number;
-  rate: number;
-  time: number;
-  frequency: CompoundingFrequency;
-  startDate?: Date | null;
-  targetAmount?: number;
+  principal: number;      // Initial investment amount
+  rate: number;          // Annual interest rate (as percentage)
+  time: number;          // Time period in years
+  frequency: CompoundingFrequency;  // How often interest is compounded
+  startDate?: Date | null;  // Optional start date for the calculation
+  targetAmount?: number;    // Optional target amount for reverse calculations
 }
 
+// Yearly breakdown of the investment growth
 export interface YearlyBreakdown {
-  year: number;
-  amount: number;
-  interestEarned: number;
-  date?: string;
+  year: number;          // Year number or period number
+  amount: number;        // Total amount at this period
+  interestEarned: number; // Interest earned in this period
+  date?: string;         // Optional date for this period
 }
 
+// Result of a compound interest calculation
 export interface CalculationResult {
-  finalAmount: number;
-  totalInterest: number;
-  yearlyBreakdown: YearlyBreakdown[];
-  formula: string;
+  finalAmount: number;   // Final amount after compounding
+  totalInterest: number; // Total interest earned
+  yearlyBreakdown: YearlyBreakdown[]; // Detailed breakdown by period
+  formula: string;       // Formula used for calculation
 }
 
+// Extended calculation parameters for history storage
 export interface CalculationHistory extends Omit<CalculationParams, 'targetAmount'> {
-  id: string;
-  createdAt: string;
-  finalAmount: number;
-  totalInterest: number;
-  formula: string;
+  id: string;            // Unique identifier
+  createdAt: string;     // Timestamp of calculation
+  finalAmount: number;   // Final amount calculated
+  totalInterest: number; // Total interest earned
+  formula: string;       // Formula used
 }
 
-// Get frequency value as number of compounds per year
+/**
+ * Utility Functions
+ */
+
+// Convert frequency string to number of compounds per year
 export const getFrequencyValue = (frequency: CompoundingFrequency): number => {
   switch (frequency) {
     case 'annually': return 1;
@@ -49,12 +61,11 @@ export const getFrequencyValue = (frequency: CompoundingFrequency): number => {
     case 'monthly': return 12;
     case 'weekly': return 52;
     case 'daily': return 365;
-    case 'continuously': return Infinity;
     default: return 1;
   }
 };
 
-// Format numbers as currency
+// Format number as Philippine Peso currency
 export const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('en-PH', {
     style: 'currency',
@@ -64,7 +75,7 @@ export const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
-// Format percentage values
+// Format number as percentage
 export const formatPercentage = (value: number): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'percent',
@@ -73,48 +84,48 @@ export const formatPercentage = (value: number): string => {
   }).format(value / 100);
 };
 
-// Generate the formula based on compounding frequency
-export const getFormula = (frequency: CompoundingFrequency): string => {
-  if (frequency === 'continuously') {
-    return 'A = P × e^(rt)';
+// Get the appropriate formula string based on compounding frequency
+export const getFormula = (frequency: CompoundingFrequency, solveFor?: string): string => {
+  switch (solveFor) {
+    case 'time':
+      return 't = ln(A/P) / (n × ln(1 + r/n))';
+    default:
+      return 'A = P(1 + r/n)^(nt)';
   }
-  return 'A = P(1 + r/n)^(nt)';
 };
 
-// Calculate compound interest
+/**
+ * Main Calculation Functions
+ */
+
+// Calculate compound interest with detailed breakdown
 export const calculateCompoundInterest = (params: CalculationParams): CalculationResult => {
   const { principal, rate, time, frequency, startDate } = params;
   const n = getFrequencyValue(frequency);
-  let finalAmount: number;
   
-  // Calculate final amount based on frequency
-  if (frequency === 'continuously') {
-    finalAmount = principal * Math.exp((rate / 100) * time);
-  } else {
-    finalAmount = principal * Math.pow(1 + (rate / 100) / n, n * time);
-  }
-  
+  // Calculate final amount using formula
+  const finalAmount = principal * Math.pow(1 + (rate / 100) / n, n * time);
   const totalInterest = finalAmount - principal;
   const formula = getFormula(frequency);
   
-  // Calculate breakdown for each compounding period
+  // Generate detailed breakdown for each period
   const breakdown: YearlyBreakdown[] = [];
-  const totalPeriods = frequency === 'continuously' ? time : n * time;
+  const totalPeriods = n * time;
   let currentDate = startDate ? new Date(startDate) : undefined;
   let previousAmount = principal;
 
+  // Calculate values for each period
   for (let i = 1; i <= totalPeriods; i++) {
     let periodAmount: number;
     let period = i;
-    let periodTime = frequency === 'continuously' ? i : i / n;
-    if (frequency === 'continuously') {
-      periodAmount = principal * Math.exp((rate / 100) * periodTime);
-    } else {
-      periodAmount = principal * Math.pow(1 + (rate / 100) / n, n * periodTime);
-    }
+    let periodTime = i / n;
+    
+    // Calculate amount for this period
+    periodAmount = principal * Math.pow(1 + (rate / 100) / n, n * periodTime);
     const interestEarned = periodAmount - previousAmount;
     previousAmount = periodAmount;
 
+    // Calculate date for this period if start date is provided
     let periodDate: string | undefined;
     if (currentDate) {
       let date = new Date(currentDate);
@@ -137,15 +148,13 @@ export const calculateCompoundInterest = (params: CalculationParams): Calculatio
         case 'daily':
           date.setDate(date.getDate() + 1);
           break;
-        default:
-          break;
       }
       periodDate = date.toISOString().split('T')[0];
       currentDate = date;
     }
 
     breakdown.push({
-      year: period, // keep property name for compatibility with UI, but it's now payment number
+      year: period,
       amount: periodAmount,
       interestEarned,
       date: periodDate

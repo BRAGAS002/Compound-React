@@ -14,20 +14,36 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import type { CalculationHistory as CalculationHistoryType } from "@/utils/calculatorUtils";
 
+/**
+ * Props interface for the CalculationHistory component
+ * @property onSelectHistory - Callback function when a history item is selected
+ */
 interface HistoryProps {
   onSelectHistory: (params: CalculationParams) => void;
 }
 
+/**
+ * CalculationHistory Component
+ * 
+ * Shows past calculations with:
+ * - List of saved calculations
+ * - Click to reuse a calculation
+ * - Delete individual items
+ * - Clear all history
+ */
 export function CalculationHistory({ onSelectHistory }: HistoryProps) {
+  // Track history and selection
   const [history, setHistory] = useState<CalculationHistoryType[]>([]);
   const [selectedItem, setSelectedItem] = useState<CalculationHistoryType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
+  // Load history on start
   useEffect(() => {
     loadHistory();
   }, []);
 
+  // Load saved calculations
   const loadHistory = async () => {
     try {
       setIsLoading(true);
@@ -45,6 +61,7 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
     }
   };
 
+  // Delete one calculation
   const handleDelete = async (id: string) => {
     try {
       await deleteCalculation(id);
@@ -66,6 +83,7 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
     }
   };
 
+  // Clear all calculations
   const handleClearAll = async () => {
     try {
       await clearCalculationHistory();
@@ -85,10 +103,12 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
     }
   };
 
+  // Format date to local style
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
 
+  // Handle item selection
   const handleItemClick = (item: CalculationHistoryType) => {
     setSelectedItem(item);
     onSelectHistory({
@@ -102,6 +122,7 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
 
   return (
     <Card className="w-full">
+      {/* Header with Clear All button */}
       <CardHeader className="flex flex-row items-center justify-between px-4 sm:px-6">
         <CardTitle className="text-xl sm:text-2xl">Calculation History</CardTitle>
         <AlertDialog>
@@ -125,8 +146,10 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
           </AlertDialogContent>
         </AlertDialog>
       </CardHeader>
+
       <CardContent className="px-4 sm:px-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* History List */}
           <ScrollArea className="h-[300px] sm:h-[400px] rounded-md">
             {isLoading ? (
               <div className="text-center py-8 text-muted-foreground text-sm sm:text-base">
@@ -146,6 +169,7 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
                     }`}
                     onClick={() => handleItemClick(item)}
                   >
+                    {/* History Item Header */}
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <h4 className="font-medium text-sm sm:text-base">{formatCurrency(item.principal)} invested for {item.time} years</h4>
@@ -165,6 +189,7 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
                         Delete
                       </Button>
                     </div>
+                    {/* History Item Footer */}
                     <div className="flex justify-between items-center">
                       <div className="text-xs sm:text-sm">
                         <p className="flex gap-2 items-center">
@@ -182,6 +207,7 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
             )}
           </ScrollArea>
           
+          {/* Selected Item Details */}
           {selectedItem && (
             <div className="border rounded-lg p-3 sm:p-4">
               <h3 className="font-semibold mb-3 sm:mb-4 text-base sm:text-lg">Calculation Details</h3>

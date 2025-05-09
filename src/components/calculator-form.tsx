@@ -1,3 +1,19 @@
+/**
+ * CalculatorForm Component
+ * 
+ * A form component for compound interest calculations that allows users to:
+ * - Input principal amount, interest rate, time period, and compounding frequency
+ * - Optionally include a start date for the calculation
+ * - Save calculations to history
+ * - Reset form fields
+ * 
+ * The component handles:
+ * - Form validation
+ * - Local storage persistence
+ * - Toast notifications for user feedback
+ * - Responsive design for different screen sizes
+ */
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,31 +24,46 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CalculationParams, CompoundingFrequency, calculateCompoundInterest, saveCalculation } from "@/utils/calculatorUtils";
 import { useToast } from "@/components/ui/use-toast";
 
+/**
+ * Props interface for the CalculatorForm component
+ * @property onCalculate - Callback function that receives calculation parameters when form is submitted
+ */
 interface CalculatorFormProps {
   onCalculate: (params: CalculationParams) => void;
 }
 
+/**
+ * CalculatorForm Component
+ * 
+ * A form for compound interest calculations with:
+ * - Input fields for principal, rate, time, and frequency
+ * - Optional start date
+ * - Form validation
+ * - Saves to local storage
+ * - Reset button
+ */
 export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
+  // Initialize form state with saved values from localStorage or defaults
   const [params, setParams] = useState<CalculationParams>(() => {
-    // Load saved params from localStorage or use defaults
     const savedParams = localStorage.getItem('calculatorParams');
     return savedParams ? JSON.parse(savedParams) : {
-      principal: 10000,
-      rate: 5,
-      time: 10,
+      principal: "",
+      rate: "",
+      time: "",
       frequency: 'annually',
       startDate: null
     };
   });
 
+  // State to control whether start date input is shown
   const [includeDate, setIncludeDate] = useState(false);
 
-  // Save params to localStorage whenever they change
+  // Save form values to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('calculatorParams', JSON.stringify(params));
   }, [params]);
 
-  // Update startDate when includeDate changes
+  // Handle start date toggle
   useEffect(() => {
     if (includeDate) {
       setParams(prev => ({
@@ -49,14 +80,21 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
 
   const { toast } = useToast();
 
+  /**
+   * Handles changes to numeric input fields
+   * Converts empty strings to empty values, otherwise parses as float
+   */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setParams(prev => ({
       ...prev,
-      [name]: name === 'startDate' ? new Date(value) : parseFloat(value) || 0
+      [name]: name === 'startDate' ? new Date(value) : value === '' ? '' : parseFloat(value)
     }));
   };
 
+  /**
+   * Updates the compounding frequency when user selects a new option
+   */
   const handleFrequencyChange = (value: string) => {
     setParams(prev => ({
       ...prev,
@@ -64,10 +102,14 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
     }));
   };
 
+  /**
+   * Handles form submission
+   * Validates inputs and performs calculation if valid
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate inputs
+    // Validate principal amount
     if (params.principal <= 0) {
       toast({
         title: "Invalid Principal",
@@ -77,6 +119,7 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
       return;
     }
 
+    // Validate interest rate
     if (params.rate <= 0) {
       toast({
         title: "Invalid Interest Rate",
@@ -86,6 +129,7 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
       return;
     }
 
+    // Validate time period
     if (params.time <= 0 || !Number.isInteger(params.time)) {
       toast({
         title: "Invalid Time Period",
@@ -95,21 +139,19 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
       return;
     }
 
-    // Calculate results
+    // Calculate and save results
     const result = calculateCompoundInterest(params);
-    
-    // Save to history
     await saveCalculation(params, result);
-    
-    // Notify parent component
     onCalculate(params);
     
+    // Show success notification
     toast({
       title: "Calculation Complete",
       description: "Your calculation has been saved to history.",
     });
   };
 
+  // Render the form UI
   return (
     <Card className="w-full">
       <CardHeader className="px-4 sm:px-6">
@@ -120,7 +162,9 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
       </CardHeader>
       <CardContent className="px-4 sm:px-6">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Input Fields Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            {/* Principal Amount Input */}
             <div className="space-y-2">
               <Label htmlFor="principal" className="text-sm sm:text-base">Principal Amount (₱)</Label>
               <Input
@@ -135,6 +179,7 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
               />
             </div>
 
+            {/* Interest Rate Input */}
             <div className="space-y-2">
               <Label htmlFor="rate" className="text-sm sm:text-base">Annual Interest Rate (%)</Label>
               <Input
@@ -149,6 +194,7 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
               />
             </div>
 
+            {/* Time Period Input */}
             <div className="space-y-2">
               <Label htmlFor="time" className="text-sm sm:text-base">Time Period (Years)</Label>
               <Input
@@ -163,6 +209,7 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
               />
             </div>
 
+            {/* Compounding Frequency Select */}
             <div className="space-y-2">
               <Label htmlFor="frequency" className="text-sm sm:text-base">Compounding Frequency</Label>
               <Select 
@@ -179,11 +226,11 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
                   <SelectItem value="monthly">Monthly</SelectItem>
                   <SelectItem value="weekly">Weekly</SelectItem>
                   <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="continuously">Continuously</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
+            {/* Optional Start Date Section */}
             <div className="space-y-2 sm:col-span-2">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -206,6 +253,7 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
             </div>
           </div>
 
+          {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">
             <Button type="submit" className="w-full sm:flex-1 finance-btn h-10 sm:h-11 text-sm sm:text-base">
               Calculate
