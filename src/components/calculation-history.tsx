@@ -227,7 +227,34 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
                 <p><strong>Compounding:</strong> {selectedItem.frequency}</p>
                 <p><strong>Future Value (FV):</strong> {formatCurrency(selectedItem.finalAmount)}</p>
                 <p><strong>Total Interest:</strong> {formatCurrency(selectedItem.totalInterest)}</p>
-                <p><strong>Formula Used:</strong> {selectedItem.formula}</p>
+                <p><strong>Formula Used:</strong> CI = P(1 + r/n)<sup>nt</sup> - P</p>
+                <div className="mt-2">
+                  <p className="font-semibold mb-1">Step-by-Step Calculation:</p>
+                  {(() => {
+                    const P = selectedItem.principal;
+                    const r = selectedItem.rate / 100;
+                    const t = selectedItem.time;
+                    const n = (() => {
+                      switch (selectedItem.frequency) {
+                        case 'annually': return 1;
+                        case 'semi-annually': return 2;
+                        case 'quarterly': return 4;
+                        case 'monthly': return 12;
+                        case 'weekly': return 52;
+                        case 'daily': return 365;
+                        default: return 1;
+                      }
+                    })();
+                    const FV = selectedItem.finalAmount;
+                    const CI = FV - P;
+                    return [
+                      <p key="step1">Step 1: CI = {formatCurrency(P)}(1 + {r.toFixed(4)}/{n})<sup>{n}×{t}</sup> - {formatCurrency(P)}</p>,
+                      <p key="step2">Step 2: CI = {formatCurrency(P)}({(1 + r/n).toFixed(4)})<sup>{n * t}</sup> - {formatCurrency(P)}</p>,
+                      <p key="step3">Step 3: CI = {formatCurrency(FV)} - {formatCurrency(P)}</p>,
+                      <p key="step4">Step 4: CI = {formatCurrency(CI)}</p>
+                    ];
+                  })()}
+                </div>
                 <p><strong>Calculated on:</strong> {formatDate(selectedItem.createdAt)}</p>
               </div>
             </div>
