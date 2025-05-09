@@ -129,6 +129,16 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
       return;
     }
 
+    // Add maximum rate validation
+    if (params.rate > 100) {
+      toast({
+        title: "Invalid Interest Rate",
+        description: "Interest rate cannot exceed 100%",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Validate time period
     if (params.time <= 0 || !Number.isInteger(params.time)) {
       toast({
@@ -157,7 +167,7 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
       <CardHeader className="px-4 sm:px-6">
         <CardTitle className="text-xl sm:text-2xl">Compound Interest Calculator</CardTitle>
         <CardDescription className="text-sm sm:text-base">
-          Calculate how your investments will grow over time with compound interest.
+          Calculate how your investments will grow over time with compound interest to determine the Compound Interest (CI).
         </CardDescription>
       </CardHeader>
       <CardContent className="px-4 sm:px-6">

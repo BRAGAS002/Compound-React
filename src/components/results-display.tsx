@@ -53,15 +53,45 @@ interface ResultsDisplayProps {
  * Returns the appropriate formula string based on what we're solving for
  * @param solveFor - The value being solved for
  * @param frequency - The compounding frequency
- * @returns The formula string to display
+ * @returns The formula string to display (as JSX)
  */
-function getFormulaForSolveFor(solveFor: string | undefined, frequency: string) {
+function getFormulaForSolveFor(solveFor: string | undefined, frequency: string): React.ReactNode {
   switch (solveFor) {
-    case 'principal': return 'P = A / (1 + r/n)^(nt)';
-    case 'finalAmount': return 'A = P(1 + r/n)^(nt)';
-    case 'rate': return 'r = n((A/P)^(1/nt) - 1)';
-    case 'time': return 't = ln(A/P) / (n × ln(1 + r/n))';
-    default: return 'A = P(1 + r/n)^(nt)';
+    // Formula for Principal
+    case 'principal':
+      return (
+        <>
+          P = <span>FV / (1 + r/n)<sup>nt</sup></span>
+        </>
+      );
+    // Formula for Future Value (FV)
+    case 'finalAmount':
+      return (
+        <>
+          FV = <span>P(1 + r/n)<sup>nt</sup></span>
+        </>
+      );
+    // Formula for Rate
+    case 'rate':
+      return (
+        <>
+          r = <span>n((FV/P)<sup>1/nt</sup> - 1)</span>
+        </>
+      );
+    // Formula for Time
+    case 'time':
+      return (
+        <>
+          t = <span>ln(FV/P) / (n × ln(1 + r/n))</span>
+        </>
+      );
+    // Default: Compound Interest (CI)
+    default:
+      return (
+        <>
+          CI = <span>P(1 + r/n)<sup>nt</sup> - P</span>
+        </>
+      );
   }
 }
 
@@ -71,7 +101,7 @@ function getFormulaForSolveFor(solveFor: string | undefined, frequency: string) 
  * @param solveFor - The value being solved for
  * @returns Array of calculation steps with formatted values
  */
-function getStepByStepCalculation(params: CalculationParams, solveFor: string | undefined) {
+function getStepByStepCalculation(params: CalculationParams, solveFor: string | undefined): React.ReactNode[] {
   const { principal, rate, time, frequency } = params;
   const rateDecimal = rate / 100;
   const n = getFrequencyNumber(frequency);
@@ -82,43 +112,84 @@ function getStepByStepCalculation(params: CalculationParams, solveFor: string | 
   switch (solveFor) {
     case 'principal':
       return [
-        `P = A / (1 + r/n)^(nt)`,
-        `P = ${formatCurrency(finalAmount)} / (1 + ${rateDecimal.toFixed(4)}/${nValue})^(${nValue} × ${time})`,
-        `P = ${formatCurrency(finalAmount)} / (${(1 + rateDecimal/nValue).toFixed(4)})^(${nValue * time})`,
-        `P = ${formatCurrency(finalAmount)} / ${Math.pow(1 + rateDecimal/nValue, nValue * time).toFixed(4)}`,
-        `P = ${formatCurrency(principal)}`
+        <><b>P = FV / (1 + r/n)<sup>nt</sup></b></>,
+        <>
+          P = {formatCurrency(finalAmount)} / (1 + {rateDecimal.toFixed(4)}/{nValue})<sup>{nValue}×{time}</sup>
+        </>,
+        <>
+          P = {formatCurrency(finalAmount)} / ({(1 + rateDecimal/nValue).toFixed(4)})<sup>{nValue * time}</sup>
+        </>,
+        <>
+          P = {formatCurrency(finalAmount)} / {Math.pow(1 + rateDecimal/nValue, nValue * time).toFixed(4)}
+        </>,
+        <>
+          P = {formatCurrency(principal)}
+        </>
       ];
     case 'finalAmount':
       return [
-        `A = P(1 + r/n)^(nt)`,
-        `A = ${formatCurrency(principal)}(1 + ${rateDecimal.toFixed(4)}/${nValue})^(${nValue} × ${time})`,
-        `A = ${formatCurrency(principal)}(${(1 + rateDecimal/nValue).toFixed(4)})^(${nValue * time})`,
-        `A = ${formatCurrency(principal)} × ${Math.pow(1 + rateDecimal/nValue, nValue * time).toFixed(4)}`,
-        `A = ${formatCurrency(finalAmount)}`
+        <><b>FV = P(1 + r/n)<sup>nt</sup></b></>,
+        <>
+          FV = {formatCurrency(principal)}(1 + {rateDecimal.toFixed(4)}/{nValue})<sup>{nValue}×{time}</sup>
+        </>,
+        <>
+          FV = {formatCurrency(principal)}({(1 + rateDecimal/nValue).toFixed(4)})<sup>{nValue * time}</sup>
+        </>,
+        <>
+          FV = {formatCurrency(principal)} × {Math.pow(1 + rateDecimal/nValue, nValue * time).toFixed(4)}
+        </>,
+        <>
+          FV = {formatCurrency(finalAmount)}
+        </>
       ];
     case 'rate':
       return [
-        `r = n((A/P)^(1/nt) - 1)`,
-        `r = ${nValue}((${formatCurrency(finalAmount)}/${formatCurrency(principal)})^(1/(${nValue} × ${time})) - 1)`,
-        `r = ${nValue}((${(finalAmount/principal).toFixed(4)})^(1/${nValue * time}) - 1)`,
-        `r = ${nValue}(${Math.pow(finalAmount/principal, 1/(nValue * time)).toFixed(4)} - 1)`,
-        `r = ${(rateDecimal * 100).toFixed(2)}%`
+        <><b>r = n((FV/P)<sup>1/nt</sup> - 1)</b></>,
+        <>
+          r = {nValue}(( {formatCurrency(finalAmount)}/{formatCurrency(principal)} )<sup>1/({nValue}×{time})</sup> - 1)
+        </>,
+        <>
+          r = {nValue}(( {(finalAmount/principal).toFixed(4)} )<sup>1/{nValue * time}</sup> - 1)
+        </>,
+        <>
+          r = {nValue}({Math.pow(finalAmount/principal, 1/(nValue * time)).toFixed(4)} - 1)
+        </>,
+        <>
+          r = {(rateDecimal * 100).toFixed(2)}%
+        </>
       ];
     case 'time':
       return [
-        `t = ln(A/P) / (n × ln(1 + r/n))`,
-        `t = ln(${formatCurrency(finalAmount)}/${formatCurrency(principal)}) / (${nValue} × ln(1 + ${rateDecimal.toFixed(4)}/${nValue}))`,
-        `t = ${Math.log(finalAmount/principal).toFixed(4)} / (${nValue} × ${Math.log(1 + rateDecimal/nValue).toFixed(4)})`,
-        `t = ${Math.log(finalAmount/principal).toFixed(4)} / ${(nValue * Math.log(1 + rateDecimal/nValue)).toFixed(4)}`,
-        `t = ${time} years`
+        <><b>t = ln(FV/P) / (n × ln(1 + r/n))</b></>,
+        <>
+          t = ln({formatCurrency(finalAmount)}/{formatCurrency(principal)}) / ({nValue} × ln(1 + {rateDecimal.toFixed(4)}/{nValue}))
+        </>,
+        <>
+          t = {Math.log(finalAmount/principal).toFixed(4)} / ({nValue} × {Math.log(1 + rateDecimal/nValue).toFixed(4)})
+        </>,
+        <>
+          t = {Math.log(finalAmount/principal).toFixed(4)} / {(nValue * Math.log(1 + rateDecimal/nValue)).toFixed(4)}
+        </>,
+        <>
+          t = {time} years
+        </>
       ];
     default:
+      const compoundInterest = finalAmount - principal;
       return [
-        `A = P(1 + r/n)^(nt)`,
-        `A = ${formatCurrency(principal)}(1 + ${rateDecimal.toFixed(4)}/${nValue})^(${nValue} × ${time})`,
-        `A = ${formatCurrency(principal)}(${(1 + rateDecimal/nValue).toFixed(4)})^(${nValue * time})`,
-        `A = ${formatCurrency(principal)} × ${Math.pow(1 + rateDecimal/nValue, nValue * time).toFixed(4)}`,
-        `A = ${formatCurrency(finalAmount)}`
+        <><b>CI = P(1 + r/n)<sup>nt</sup> - P</b></>,
+        <>
+          CI = {formatCurrency(principal)}(1 + {rateDecimal.toFixed(4)}/{nValue})<sup>{nValue}×{time}</sup> - {formatCurrency(principal)}
+        </>,
+        <>
+          CI = {formatCurrency(principal)}({(1 + rateDecimal/nValue).toFixed(4)})<sup>{nValue * time}</sup> - {formatCurrency(principal)}
+        </>,
+        <>
+          CI = {formatCurrency(finalAmount)} - {formatCurrency(principal)}
+        </>,
+        <>
+          CI = {formatCurrency(compoundInterest)}
+        </>
       ];
   }
 }
@@ -136,10 +207,12 @@ export function ResultsDisplay({ params, solveFor }: ResultsDisplayProps) {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [isValid, setIsValid] = useState(false);
   const [displayParams, setDisplayParams] = useState<CalculationParams | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Update when inputs change
   useEffect(() => {
     if (params) {
+      setIsLoading(true);
       // Check if inputs are valid
       const valid = 
         typeof params.principal === 'number' && !isNaN(params.principal) && params.principal >= 0 &&
@@ -154,11 +227,24 @@ export function ResultsDisplay({ params, solveFor }: ResultsDisplayProps) {
         const calculatedResult = calculateCompoundInterest(params);
         setResult(calculatedResult);
       }
+      setIsLoading(false);
     }
   }, [params]);
 
   if (!result || !displayParams) {
     return null;
+  }
+
+  if (isLoading) {
+    return (
+      <Card className="w-full">
+        <CardContent className="flex items-center justify-center p-8">
+          <div className="text-center">
+            <p className="text-muted-foreground">Calculating results...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -252,7 +338,7 @@ export function ResultsDisplay({ params, solveFor }: ResultsDisplayProps) {
               {/* Variable Definitions */}
               <div className="mt-4 space-y-2 text-sm sm:text-base">
                 <p><strong>Where:</strong></p>
-                <p>A = Final amount ({formatCurrency(result.finalAmount)})</p>
+                <p>CI = Compound Interest ({formatCurrency(result.finalAmount)})</p>
                 <p>P = Principal ({formatCurrency(displayParams.principal)})</p>
                 <p>r = Annual interest rate ({displayParams.rate}%)</p>
                 <p>t = Time period ({displayParams.time} years)</p>

@@ -90,7 +90,7 @@ export const getFormula = (frequency: CompoundingFrequency, solveFor?: string): 
     case 'time':
       return 't = ln(A/P) / (n × ln(1 + r/n))';
     default:
-      return 'A = P(1 + r/n)^(nt)';
+      return 'CI = P(1 + r/n)^(nt) - P';
   }
 };
 
@@ -329,7 +329,7 @@ export const calculateMissingRate = (
   frequency: CompoundingFrequency
 ): number => {
   const n = getFrequencyValue(frequency);
-  return n * (Math.pow(finalAmount / principal, 1 / (n * time)) - 1) * 100;
+  return (Math.pow(finalAmount / principal, 1 / (n * time)) - 1) * n * 100;
 };
 
 // Calculate missing time period

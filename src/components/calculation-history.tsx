@@ -105,7 +105,16 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
 
   // Format date to local style
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        throw new Error('Invalid date');
+      }
+      return date.toLocaleDateString();
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
   };
 
   // Handle item selection
@@ -216,7 +225,7 @@ export function CalculationHistory({ onSelectHistory }: HistoryProps) {
                 <p><strong>Annual Rate:</strong> {selectedItem.rate}%</p>
                 <p><strong>Time Period:</strong> {selectedItem.time} years</p>
                 <p><strong>Compounding:</strong> {selectedItem.frequency}</p>
-                <p><strong>Final Amount:</strong> {formatCurrency(selectedItem.finalAmount)}</p>
+                <p><strong>Future Value (FV):</strong> {formatCurrency(selectedItem.finalAmount)}</p>
                 <p><strong>Total Interest:</strong> {formatCurrency(selectedItem.totalInterest)}</p>
                 <p><strong>Formula Used:</strong> {selectedItem.formula}</p>
                 <p><strong>Calculated on:</strong> {formatDate(selectedItem.createdAt)}</p>

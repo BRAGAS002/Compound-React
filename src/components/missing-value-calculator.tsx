@@ -381,7 +381,7 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="finalAmount">Future Value (₱)</Label>
+              <Label htmlFor="finalAmount">Compound Interest (CI)</Label>
               <Input
                 id="finalAmount"
                 name="finalAmount"
@@ -391,7 +391,7 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
                 value={values.finalAmount}
                 onChange={handleChange}
                 className="finance-input"
-                placeholder="Enter future value"
+                placeholder="Enter compound interest"
               />
             </div>
             <div className="space-y-2">

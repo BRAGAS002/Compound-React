@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS calculations (
     rate DECIMAL NOT NULL,
     time INTEGER NOT NULL,
     frequency TEXT NOT NULL,
+    day_count_method TEXT NOT NULL,
     start_date TIMESTAMP WITH TIME ZONE,
     final_amount DECIMAL NOT NULL,
     total_interest DECIMAL NOT NULL,
