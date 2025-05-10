@@ -44,15 +44,9 @@ import { supabase } from "@/integrations/supabase/client";
  * @property setSolveFor - Function to update which variable to solve for
  */
 interface MissingValueCalculatorProps {
-  onCalculate: (params: {
-    principal: number;
-    rate: number;
-    time: number;
-    frequency: CompoundingFrequency;
-    finalAmount: number;
-  }, solveFor: 'principal' | 'rate' | 'time' | 'finalAmount') => void;
-  solveFor: 'principal' | 'rate' | 'time' | 'finalAmount';
-  setSolveFor: (solveFor: 'principal' | 'rate' | 'time' | 'finalAmount') => void;
+  onCalculate: (params: CalculationParams, solveFor: string) => void;
+  solveFor: string;
+  setSolveFor: (value: string) => void;
 }
 
 /**
@@ -65,6 +59,7 @@ interface NumericValues {
   time: number | null;
   finalAmount: number | null;
   frequency: CompoundingFrequency;
+  timeUnit: 'years' | 'days';
 }
 
 /**
@@ -75,8 +70,9 @@ interface StoredValues {
   principal: string;
   rate: string;
   time: string;
-  frequency: CompoundingFrequency;
+  timeUnit: 'years' | 'days';
   finalAmount: string;
+  frequency: CompoundingFrequency;
 }
 
 // Storage key for persisting form values
@@ -87,8 +83,9 @@ const SAMPLE_VALUES: StoredValues = {
   principal: "",
   rate: "",
   time: "",
-  frequency: "monthly",
-  finalAmount: ""
+  timeUnit: "years",
+  finalAmount: "",
+  frequency: "monthly"
 };
 
 /**
@@ -110,9 +107,15 @@ const solveOptions = [
 export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: MissingValueCalculatorProps) {
   // Initialize form state
   const [values, setValues] = useState<StoredValues>(() => {
-    const initial = { ...SAMPLE_VALUES };
-    initial[solveFor] = "";
-    return initial;
+    const savedValues = localStorage.getItem('missingValueParams');
+    return savedValues ? JSON.parse(savedValues) : {
+      principal: '',
+      rate: '',
+      time: '',
+      timeUnit: 'years',
+      finalAmount: '',
+      frequency: 'annually'
+    };
   });
   const { toast } = useToast();
 
@@ -157,7 +160,7 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
    * Clears the field that will be calculated
    */
   const handleSolveForChange = (value: string) => {
-    setSolveFor(value as 'principal' | 'rate' | 'time' | 'finalAmount');
+    setSolveFor(value);
     setValues(prev => ({ ...prev, [value]: "" }));
   };
 
@@ -175,7 +178,7 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
       case 'rate':
         return value.toFixed(2) + '%';
       case 'time':
-        return value.toFixed(2) + ' years';
+        return value.toFixed(2) + (values.timeUnit === 'days' ? ' days' : ' years');
       default:
         return value.toString();
     }
@@ -205,92 +208,74 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
       rate: solveFor !== 'rate' ? Number(cleanNumberInput(values.rate)) : null,
       time: solveFor !== 'time' ? Number(cleanNumberInput(values.time)) : null,
       finalAmount: Number(cleanNumberInput(values.finalAmount)),
-      frequency: values.frequency
+      frequency: values.frequency,
+      timeUnit: values.timeUnit
     };
 
-    // Validate numeric values
-    for (const [key, value] of Object.entries(numericValues)) {
-      if (key === 'frequency') continue;
-      if (key === solveFor) continue;
-      
-      if (typeof value === 'number' && (isNaN(value) || value < 0)) {
-        toast({
-          title: "Invalid Input",
-          description: `Please enter a valid non-negative number for ${key}.`,
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-
-    // Perform calculation based on what we're solving for
     let result: number;
-    let params: CalculationParams;
+    const params: CalculationParams = {
+      principal: numericValues.principal!,
+      rate: numericValues.rate!,
+      time: numericValues.time!,
+      frequency: numericValues.frequency,
+      timeUnit: numericValues.timeUnit,
+      targetAmount: numericValues.finalAmount
+    };
 
     switch (solveFor) {
       case 'principal':
         result = calculateMissingPrincipal(
-          numericValues.finalAmount!,
+          numericValues.finalAmount,
           numericValues.rate!,
           numericValues.time!,
-          numericValues.frequency
+          numericValues.frequency,
+          numericValues.timeUnit
         );
-        params = {
-          principal: result,
-          rate: numericValues.rate!,
-          time: numericValues.time!,
-          frequency: numericValues.frequency,
-          targetAmount: numericValues.finalAmount!
-        };
         break;
       case 'rate':
         result = calculateMissingRate(
           numericValues.principal!,
-          numericValues.finalAmount!,
+          numericValues.finalAmount,
           numericValues.time!,
-          numericValues.frequency
+          numericValues.frequency,
+          numericValues.timeUnit
         );
-        params = {
-          principal: numericValues.principal!,
-          rate: result,
-          time: numericValues.time!,
-          frequency: numericValues.frequency,
-          targetAmount: numericValues.finalAmount!
-        };
         break;
       case 'time':
         result = calculateMissingTime(
           numericValues.principal!,
-          numericValues.finalAmount!,
+          numericValues.finalAmount,
           numericValues.rate!,
-          numericValues.frequency
+          numericValues.frequency,
+          numericValues.timeUnit
         );
-        params = {
-          principal: numericValues.principal!,
-          rate: numericValues.rate!,
-          time: result,
-          frequency: numericValues.frequency,
-          targetAmount: numericValues.finalAmount!
-        };
         break;
+      default:
+        result = calculateMissingFinalAmount(
+          numericValues.principal!,
+          numericValues.rate!,
+          numericValues.time!,
+          numericValues.frequency,
+          numericValues.timeUnit
+        );
     }
 
-    // Save calculation and notify user
-    const calculationResult = calculateCompoundInterest(params);
-    await saveCalculation(params, calculationResult);
-    
-    onCalculate({
-      principal: params.principal,
-      rate: params.rate,
-      time: params.time,
-      frequency: params.frequency,
-      finalAmount: params.targetAmount || calculationResult.finalAmount
-    }, solveFor);
+    // Save calculation to history
+    await saveCalculation(params, {
+      finalAmount: result,
+      totalInterest: result - numericValues.principal!,
+      yearlyBreakdown: [],
+      formula: getFormula(numericValues.frequency, solveFor)
+    });
 
+    // Show result
     toast({
       title: "Calculation Complete",
-      description: `The missing value has been calculated: ${formatResult(result, solveFor)}`,
+      description: `The ${solveFor} is ${formatResult(result, solveFor as keyof NumericValues)}`,
     });
+
+    // Call the onCalculate callback
+    onCalculate(params, solveFor);
   };
 
   /**
@@ -301,8 +286,9 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
       principal: "",
       rate: "",
       time: "",
-      frequency: "annually",
-      finalAmount: ""
+      timeUnit: "years",
+      finalAmount: "",
+      frequency: "annually"
     });
     localStorage.removeItem(STORAGE_KEY);
     toast({
@@ -366,19 +352,34 @@ export function MissingValueCalculator({ onCalculate, solveFor, setSolveFor }: M
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="time">Time Period (Years)</Label>
-              <Input
-                id="time"
-                name="time"
-                type="number"
-                min="0"
-                step="0.01"
-                value={values.time}
-                onChange={handleChange}
-                className="finance-input"
-                placeholder="Enter time"
-                disabled={solveFor === 'time'}
-              />
+              <Label htmlFor="time">Time Period</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="time"
+                  name="time"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={values.time}
+                  onChange={handleChange}
+                  className="finance-input"
+                  placeholder="Enter time"
+                  disabled={solveFor === 'time'}
+                />
+                <Select 
+                  value={values.timeUnit} 
+                  onValueChange={(value: 'years' | 'days') => setValues(prev => ({ ...prev, timeUnit: value }))}
+                  disabled={solveFor === 'time'}
+                >
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue placeholder="Select unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="years">Years</SelectItem>
+                    <SelectItem value="days">Days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="finalAmount">Compound Interest (CI)</Label>

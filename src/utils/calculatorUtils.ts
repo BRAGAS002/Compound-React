@@ -17,7 +17,8 @@ export type CompoundingFrequency =
 export interface CalculationParams {
   principal: number;      // Initial investment amount
   rate: number;          // Annual interest rate (as percentage)
-  time: number;          // Time period in years
+  time: number;          // Time period
+  timeUnit: 'years' | 'days';  // Unit of time (years or days)
   frequency: CompoundingFrequency;  // How often interest is compounded
   startDate?: Date | null;  // Optional start date for the calculation
   targetAmount?: number;    // Optional target amount for reverse calculations
@@ -100,17 +101,20 @@ export const getFormula = (frequency: CompoundingFrequency, solveFor?: string): 
 
 // Calculate compound interest with detailed breakdown
 export const calculateCompoundInterest = (params: CalculationParams): CalculationResult => {
-  const { principal, rate, time, frequency, startDate } = params;
+  const { principal, rate, time, timeUnit, frequency, startDate } = params;
   const n = getFrequencyValue(frequency);
   
+  // Convert time to years if it's in days
+  const timeInYears = timeUnit === 'days' ? time / 365 : time;
+  
   // Calculate final amount using formula
-  const finalAmount = principal * Math.pow(1 + (rate / 100) / n, n * time);
+  const finalAmount = principal * Math.pow(1 + (rate / 100) / n, n * timeInYears);
   const totalInterest = finalAmount - principal;
   const formula = getFormula(frequency);
   
   // Generate detailed breakdown for each period
   const breakdown: YearlyBreakdown[] = [];
-  const totalPeriods = n * time;
+  const totalPeriods = n * timeInYears;
   let currentDate = startDate ? new Date(startDate) : undefined;
   let previousAmount = principal;
 
@@ -197,6 +201,7 @@ export const saveCalculation = async (params: CalculationParams, result: Calcula
       principal: params.principal,
       rate: params.rate,
       time: params.time,
+      time_unit: params.timeUnit,
       frequency: params.frequency,
       start_date: params.startDate?.toISOString() ?? null,
       final_amount: result.finalAmount,
@@ -240,6 +245,7 @@ export const getCalculationHistory = async (): Promise<CalculationHistory[]> => 
       principal: item.principal,
       rate: item.rate,
       time: item.time,
+      time_unit: item.time_unit,
       frequency: item.frequency,
       startDate: item.start_date ? new Date(item.start_date) : null,
       finalAmount: item.final_amount,
@@ -304,10 +310,12 @@ export const calculateMissingPrincipal = (
   finalAmount: number,
   rate: number,
   time: number,
-  frequency: CompoundingFrequency
+  frequency: CompoundingFrequency,
+  timeUnit: 'years' | 'days' = 'years'
 ): number => {
   const n = getFrequencyValue(frequency);
-  return finalAmount / Math.pow(1 + (rate / 100) / n, n * time);
+  const timeInYears = timeUnit === 'days' ? time / 365 : time;
+  return finalAmount / Math.pow(1 + (rate / 100) / n, n * timeInYears);
 };
 
 // Calculate missing final amount
@@ -315,10 +323,12 @@ export const calculateMissingFinalAmount = (
   principal: number,
   rate: number,
   time: number,
-  frequency: CompoundingFrequency
+  frequency: CompoundingFrequency,
+  timeUnit: 'years' | 'days' = 'years'
 ): number => {
   const n = getFrequencyValue(frequency);
-  return principal * Math.pow(1 + (rate / 100) / n, n * time);
+  const timeInYears = timeUnit === 'days' ? time / 365 : time;
+  return principal * Math.pow(1 + (rate / 100) / n, n * timeInYears);
 };
 
 // Calculate missing interest rate
@@ -326,10 +336,12 @@ export const calculateMissingRate = (
   principal: number,
   finalAmount: number,
   time: number,
-  frequency: CompoundingFrequency
+  frequency: CompoundingFrequency,
+  timeUnit: 'years' | 'days' = 'years'
 ): number => {
   const n = getFrequencyValue(frequency);
-  return (Math.pow(finalAmount / principal, 1 / (n * time)) - 1) * n * 100;
+  const timeInYears = timeUnit === 'days' ? time / 365 : time;
+  return (Math.pow(finalAmount / principal, 1 / (n * timeInYears)) - 1) * n * 100;
 };
 
 // Calculate missing time period
@@ -337,8 +349,10 @@ export const calculateMissingTime = (
   principal: number,
   finalAmount: number,
   rate: number,
-  frequency: CompoundingFrequency
+  frequency: CompoundingFrequency,
+  timeUnit: 'years' | 'days' = 'years'
 ): number => {
   const n = getFrequencyValue(frequency);
-  return Math.log(finalAmount / principal) / (n * Math.log(1 + (rate / 100) / n));
+  const timeInYears = Math.log(finalAmount / principal) / (n * Math.log(1 + (rate / 100) / n));
+  return timeUnit === 'days' ? timeInYears * 365 : timeInYears;
 };

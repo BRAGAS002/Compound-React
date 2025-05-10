@@ -206,17 +206,31 @@ export function CalculatorForm({ onCalculate }: CalculatorFormProps) {
 
             {/* Time Period Input */}
             <div className="space-y-2">
-              <Label htmlFor="time" className="text-sm sm:text-base">Time Period (Years)</Label>
-              <Input
-                id="time"
-                name="time"
-                type="number"
-                min="1"
-                step="1"
-                value={params.time}
-                onChange={handleChange}
-                className="finance-input h-10 sm:h-11 text-sm sm:text-base"
-              />
+              <Label htmlFor="time" className="text-sm sm:text-base">Time Period</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="time"
+                  name="time"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={params.time}
+                  onChange={handleChange}
+                  className="finance-input h-10 sm:h-11 text-sm sm:text-base"
+                />
+                <Select 
+                  value={params.timeUnit || 'years'} 
+                  onValueChange={(value) => setParams(prev => ({ ...prev, timeUnit: value }))}
+                >
+                  <SelectTrigger className="w-[100px] h-10 sm:h-11 text-sm sm:text-base">
+                    <SelectValue placeholder="Select unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="years">Years</SelectItem>
+                    <SelectItem value="days">Days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Compounding Frequency Select */}
